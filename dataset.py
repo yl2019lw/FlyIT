@@ -58,6 +58,8 @@ def filter_top_cv(d, k=10):
 
         if g in fd:
             fd[g]['img'] = d[g]['img']
+    if len(top_cv) < k:
+        print("top cv less than k", count)
     return fd, top_cv
 
 
@@ -65,11 +67,16 @@ class DrosophilaDataset(Dataset):
 
     def __init__(self, mode='train', stage=2):
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
+        self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
+        tl = int(len(genes) * 0.6)
+        vl = int(len(genes) * 0.8)
         if mode == 'train':
-            self.genes = genes[:len(genes) // 2]
+            self.genes = genes[:tl]
         elif mode == 'test':
-            self.genes = genes[len(genes) // 2:]
+            self.genes = genes[vl:]
+        else:
+            self.genes = genes[tl:vl]
 
     def __len__(self):
         return len(self.genes)
@@ -87,26 +94,22 @@ class DrosophilaDataset(Dataset):
         imgs = np.stack(imgs).astype(np.float)
 
         gene_anns = self.db[gene]['ann']
-        anns = np.zeros(len(self.top_cv))
+        anns = np.zeros(self.nclass)
         for ann in gene_anns:
             anns[self.top_cv.index(ann)] = 1
 
-        print("dataset gene", gene, imgs.shape, anns.shape)
+        # print("dataset gene", gene, imgs.shape, anns.shape)
         return gene, imgs, anns
 
 
 def fly_collate_fn(batch):
     bgene, bimgs, blabel = zip(*batch)
-    print("bgene", bgene)
-    # print("blabel", blabel)
     size = len(bgene)
     nslice = [x.shape[0] for x in bimgs]
     max_slice = max(nslice)
-    print("nslice", nslice, max_slice)
 
     pad_imgs = []
     for i in range(size):
-        print("bimgs", i, bimgs[i].shape)
         pad_img = np.pad(bimgs[i],
                          [(0, max_slice - nslice[i]), (0, 0),
                           (0, 0), (0, 0)],

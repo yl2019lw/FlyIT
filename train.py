@@ -24,7 +24,7 @@ def train_naggn():
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 2
+    cfg['batch'] = 8
     cfg['lr'] = 0.0001
     cfg['model'] = 'naggn'
     cfg['collate'] = dataset.fly_collate_fn
@@ -89,10 +89,10 @@ def run_train(model, cfg):
         cfg['step'] = e
         for i_batch, sample_batched in enumerate(train_loader):
             sgene, img, label, nslice = sample_batched
-            print("sgene", sgene)
-            # print("img", img.shape)
+            # print("train sgene", sgene)
+            # print("train img", img.shape)
             # print("label", label)
-            print("nslice", nslice)
+            # print("train nslice", nslice)
             inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
             gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
             nslice = torch.from_numpy(nslice)
@@ -101,9 +101,7 @@ def run_train(model, cfg):
             loss = criterion(predict, gt)
             loss.backward()
             optimizer.step()
-            # for name, param in model.named_parameters():
-            #     writer.add_histogram(
-            #         name, param.clone().cpu().data.numpy(), step)
+
             writer.add_scalar("loss", loss, step)
             step += 1
 
@@ -134,8 +132,8 @@ def run_train(model, cfg):
             if lab_f1_macro > max_f1:
                 max_f1 = lab_f1_macro
                 print("----save best epoch:%d, f1:%f---" % (e, max_f1))
-            # torch.save(model, model_pth)
-            torch.save(model.state_dict(), model_pth)
+            torch.save(model, model_pth)
+            # torch.save(model.state_dict(), model_pth)
             run_test(model, cfg)
 
 
@@ -180,13 +178,15 @@ def run_test(model, cfg):
     model.eval()
     with torch.no_grad():
         test_loader = DataLoader(cfg['test'], batch_size=cfg['batch'],
-                                 shuffle=False, num_workers=cfg['nworker'])
+                                 shuffle=False, num_workers=cfg['nworker'],
+                                 collate_fn=cfg['collate'])
         np_pd = []
         np_sgene = []
         for i_batch, sample_batched in enumerate(test_loader):
-            sgene, img = sample_batched
-            inputs = img.type(torch.cuda.FloatTensor)
-            predict = model(inputs)
+            sgene, img, label, nslice = sample_batched
+            inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
+            nslice = torch.from_numpy(nslice)
+            predict = model(inputs, nslice)
             test_pd = util.threshold_tensor_batch(predict)
             np_pd.extend(test_pd.data.cpu().numpy())
             np_sgene.extend(sgene)
