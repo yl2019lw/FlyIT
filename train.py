@@ -25,17 +25,16 @@ def train_naggn():
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 8
-    cfg['lr'] = 0.0001
+    cfg['lr'] = 0.00001
     cfg['model'] = 'naggn'
     cfg['collate'] = dataset.fly_collate_fn
 
     model_pth = os.path.join('modeldir', cfg['model'], 'model.pth')
+    model = nn.DataParallel(naggn.NAggN().cuda())
     if os.path.exists(model_pth):
         print("load pretrained model", model_pth)
-        m = torch.load(model_pth)
-    else:
-        m = naggn.NAggN().cuda()
-    model = nn.DataParallel(m)
+        model.load_state_dict(torch.load(model_pth))
+
     run_train(model, cfg)
 
 
@@ -54,12 +53,10 @@ def train_dragn():
     cfg['collate'] = dataset.fly_collate_fn
 
     model_pth = os.path.join('modeldir', cfg['model'], 'model.pth')
+    model = nn.DataParallel(dragn.DRAGN().cuda())
     if os.path.exists(model_pth):
         print("load pretrained model", model_pth)
-        m = torch.load(model_pth)
-    else:
-        m = dragn.DRAGN().cuda()
-    model = nn.DataParallel(m)
+        model.load_state_dict(torch.load(model_pth))
     run_train(model, cfg)
 
 
@@ -132,8 +129,7 @@ def run_train(model, cfg):
             if lab_f1_macro > max_f1:
                 max_f1 = lab_f1_macro
                 print("----save best epoch:%d, f1:%f---" % (e, max_f1))
-            torch.save(model, model_pth)
-            # torch.save(model.state_dict(), model_pth)
+            torch.save(model.state_dict(), model_pth)
             run_test(model, cfg)
 
 
