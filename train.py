@@ -15,10 +15,10 @@ import dragn
 import util
 
 
-def train_naggn():
-    train_dataset = dataset.DrosophilaDataset(mode='train')
-    val_dataset = dataset.DrosophilaDataset(mode='val')
-    test_dataset = dataset.DrosophilaDataset(mode='test')
+def train_naggn(s=2):
+    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
+    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
+    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
 
     cfg = util.default_cfg()
     cfg['train'] = train_dataset
@@ -38,10 +38,10 @@ def train_naggn():
     run_train(model, cfg)
 
 
-def train_dragn():
-    train_dataset = dataset.DrosophilaDataset(mode='train')
-    val_dataset = dataset.DrosophilaDataset(mode='val')
-    test_dataset = dataset.DrosophilaDataset(mode='test')
+def train_dragn(s=2):
+    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
+    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
+    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
 
     cfg = util.default_cfg()
     cfg['train'] = train_dataset

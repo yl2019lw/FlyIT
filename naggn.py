@@ -16,15 +16,15 @@ def get_gpu_usage(device=1):
 
 
 class L1Aggregator(nn.Module):
-
+    '''single attention block'''
     def __init__(self):
         super(L1Aggregator, self).__init__()
         self.q0 = nn.Parameter(torch.ones((1, FV_DIM)))
-        self.w = nn.Parameter(torch.ones(FV_DIM))
-        self.b = nn.Parameter(torch.zeros(FV_DIM))
 
     def forward(self, fvs):
-        '''single attention block'''
+        '''fvs: ns x nd, r0: 1 x nd'''
+        norm = torch.norm(fvs, p=2, dim=1, keepdim=True)
+        fvs = torch.div(fvs, norm.expand_as(fvs))
         ek = torch.mm(self.q0, fvs.t())
         ak = torch.nn.Softmax(dim=1)(ek)
         r0 = torch.mm(ak, fvs)
@@ -32,12 +32,24 @@ class L1Aggregator(nn.Module):
 
 
 class L2Aggregator(nn.Module):
-
+    '''cascaded two attention blocks'''
     def __init__(self):
-        pass
+        super(L2Aggregator, self).__init__()
+        self.q0 = nn.Parameter(torch.zeros((1, FV_DIM)))
+        self.W = nn.Parameter(torch.randn(FV_DIM, FV_DIM))
+        self.b = nn.Parameter(torch.zeros(1, FV_DIM))
 
-    def forward(self, x):
-        pass
+    def forward(self, fvs):
+        e0k = torch.mm(self.q0, fvs.t())
+        a0k = torch.nn.Softmax(dim=1)(e0k)
+        r0 = torch.mm(a0k, fvs)
+
+        q1 = torch.tanh(torch.mm(r0, self.W) + self.b)
+        e1k = torch.mm(q1, fvs.t())
+        a1k = torch.nn.Softmax(dim=1)(e1k)
+        r1 = torch.mm(a1k, fvs)
+
+        return r1
 
 
 class NAggN(nn.Module):
@@ -45,21 +57,18 @@ class NAggN(nn.Module):
     def __init__(self, k=10):
         super(NAggN, self).__init__()
         self.fvextractor = extractor.Resnet()
-        self.aggregator = L1Aggregator()
+        self.aggregator = L2Aggregator()
         self.proj = nn.Linear(FV_DIM, k)
 
     def forward(self, x, nslice):
-        # print("forward", x.shape, "slice", nslice)
+        '''x: nb x ns x c x h x w'''
         nsample = x.shape[0]
         nfvs = []
         for s in range(nsample):
             fvs = self.fvextractor(x[s, :nslice[s], :, :])
-            # print("fvs", fvs.shape)
             gfv = self.aggregator(fvs)
-            # print("gfv", gfv.shape)
             nfvs.append(gfv)
         nfvs = torch.cat(nfvs, dim=0)
-        # print("nfvs", nfvs.shape)
         return torch.sigmoid(self.proj(nfvs))
 
 
