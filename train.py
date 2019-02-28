@@ -143,6 +143,7 @@ def run_val(model, cfg):
         criterion = cfg['criterion']
         np_label = []
         np_pd = []
+        np_score = []
         tot_loss = 0.0
 
         for i_batch, sample_batched in enumerate(val_loader):
@@ -156,15 +157,17 @@ def run_val(model, cfg):
 
             val_pd = util.threshold_tensor_batch(predict)
             np_pd.append(val_pd.data.cpu().numpy())
+            np_score.append(predict.data.cpu().numpy())
             np_label.append(gt.data.cpu().numpy())
 
         np_label = np.concatenate(np_label)
         np_pd = np.concatenate(np_pd)
+        np_score = np.concatenate(np_score)
 
         tot_loss = tot_loss / len(val_loader)
         cfg['writer'].add_scalar("val loss", tot_loss.item(), cfg['step'])
-        lab_f1_macro = util.torch_metrics(np_label, np_pd,
-                                          cfg['writer'], cfg['step'])
+        lab_f1_macro = util.torch_metrics(np_label, np_pd, cfg['writer'],
+                                          cfg['step'], score=np_score)
 
         return tot_loss.item(), lab_f1_macro
 
@@ -176,7 +179,9 @@ def run_test(model, cfg):
         test_loader = DataLoader(cfg['test'], batch_size=cfg['batch'],
                                  shuffle=False, num_workers=cfg['nworker'],
                                  collate_fn=cfg['collate'])
+        np_label = []
         np_pd = []
+        np_score = []
         np_sgene = []
         for i_batch, sample_batched in enumerate(test_loader):
             sgene, img, label, nslice = sample_batched
@@ -184,8 +189,16 @@ def run_test(model, cfg):
             nslice = torch.from_numpy(nslice)
             predict = model(inputs, nslice)
             test_pd = util.threshold_tensor_batch(predict)
-            np_pd.extend(test_pd.data.cpu().numpy())
+            np_pd.append(test_pd.data.cpu().numpy())
             np_sgene.extend(sgene)
+            np_label.append(label)
+            np_score.append(predict.data.cpu().numpy())
+
+        np_label = np.concatenate(np_label)
+        np_pd = np.concatenate(np_pd)
+        np_score = np.concatenate(np_score)
+        util.torch_metrics(np_label, np_pd, cfg['writer'],
+                           cfg['step'], mode='test', score=np_score)
 
         np_target = [' '.join([str(x) for x in np.where(item)[0]])
                      for item in np_pd]
