@@ -42,7 +42,7 @@ def sklearn_f1_micro(gt, predict):
 def torch_metrics(gt, predict, writer, step, mode="val", score=None):
 
     sk_auc_macro = sklearn_auc_macro(gt, score)
-    sk_auc_micro = sklearn_auc_micro(gt, score)
+    # sk_auc_micro = sklearn_auc_micro(gt, score)
     sk_f1_macro = sklearn_f1_macro(gt, predict)
     sk_f1_micro = sklearn_f1_micro(gt, predict)
 
@@ -52,7 +52,7 @@ def torch_metrics(gt, predict, writer, step, mode="val", score=None):
     lab_specificity = npmetrics.label_specificity(gt, predict)
 
     writer.add_scalar("%s auc macro sk" % mode, sk_auc_macro, step)
-    writer.add_scalar("%s auc micro sk" % mode, sk_auc_micro, step)
+    # writer.add_scalar("%s auc micro sk" % mode, sk_auc_micro, step)
     writer.add_scalar("%s label f1 macro sk" % mode, sk_f1_macro, step)
     writer.add_scalar("%s label f1 micro sk" % mode, sk_f1_micro, step)
 

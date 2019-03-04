@@ -1,5 +1,5 @@
-auc:0.8554
-f1_macro:0.6331
-f1_micro:0.6816
-sensitivity:0.6483
-specificity:0.8939
+auc:0.9321
+f1_macro:0.7806
+f1_micro:0.7999
+sensitivity:0.7625
+specificity:0.9406

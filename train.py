@@ -66,7 +66,7 @@ def train_resnet_pj(s=2):
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 64
-    cfg['lr'] = 0.0001
+    cfg['lr'] = 0.000001
     cfg['model'] = 'resnet_pj'
     cfg['model_dir'] = 'modeldir/stage%d/resnet_pj' % s
     cfg['collate'] = default_collate
@@ -289,4 +289,4 @@ def run_test(model, cfg):
 if __name__ == "__main__":
     # train_naggn(s=3)
     # train_resnet_si(s=6)
-    train_resnet_pj(s=5)
+    train_resnet_pj(s=6)
