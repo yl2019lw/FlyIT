@@ -57,7 +57,7 @@ class NAggN(nn.Module):
     def __init__(self, k=10):
         super(NAggN, self).__init__()
         self.fvextractor = extractor.Resnet()
-        self.aggregator = L2Aggregator()
+        self.aggregator = L1Aggregator()
         self.proj = nn.Linear(FV_DIM, k)
 
     def forward(self, x, nslice):
@@ -65,7 +65,7 @@ class NAggN(nn.Module):
         nsample = x.shape[0]
         nfvs = []
         for s in range(nsample):
-            fvs = self.fvextractor(x[s, :nslice[s], :, :])
+            fvs = self.fvextractor(x[s, :nslice[s], :])
             gfv = self.aggregator(fvs)
             nfvs.append(gfv)
         nfvs = torch.cat(nfvs, dim=0)

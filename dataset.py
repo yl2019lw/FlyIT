@@ -63,13 +63,19 @@ def filter_top_cv(d, k=10):
 
 
 def data_stat(stage=1):
+    print("-------data stat for stage %d-------" % stage)
     d = load_by_stage(stage=stage)
-    # d, top_cv = filter_top_cv(d)
+    d, top_cv = filter_top_cv(d)
     genes = list(d.keys())
     imgs = []
+    all_cv = []
     for g in genes:
         imgs.extend(d[g]['img'])
+        all_cv += d[g]['ann']
     print("stage", stage, "genes", len(genes), "imgs", len(imgs))
+    count = Counter(all_cv)
+    print(count)
+    print("\n")
 
 
 def generate_pj_samples(d, genes, count=4):

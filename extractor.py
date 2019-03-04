@@ -6,10 +6,10 @@ import torchvision
 import torch.nn as nn
 
 
-class Resnet(nn.Module):
+class ConvResnet(nn.Module):
 
     def __init__(self):
-        super(Resnet, self).__init__()
+        super(ConvResnet, self).__init__()
         origin = torchvision.models.resnet18(pretrained=True)
         self.conv0 = nn.Conv2d(3, 64, kernel_size=7, stride=2,
                                padding=3, bias=False)
@@ -27,6 +27,16 @@ class Resnet(nn.Module):
 
         self.features = nn.Sequential(self.layer0, self.layer1, self.layer2,
                                       self.layer3, self.layer4)
+
+    def forward(self, x):
+        return self.features(x)
+
+
+class Resnet(nn.Module):
+
+    def __init__(self):
+        super(Resnet, self).__init__()
+        self.features = ConvResnet()
         self.pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):

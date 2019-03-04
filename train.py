@@ -13,6 +13,78 @@ import dataset
 import naggn
 import dragn
 import util
+import loss
+import extractor
+
+FV_DIM = 512
+
+
+class SiNet(nn.Module):
+
+    def __init__(self, k=10):
+        super(SiNet, self).__init__()
+        self.fvextractor = extractor.Resnet()
+        self.proj = nn.Linear(FV_DIM, k)
+
+    def forward(self, x):
+        fv = self.fvextractor(x)
+        return torch.sigmoid(self.proj(fv))
+
+
+def train_resnet_si(s=2):
+    train_dataset = dataset.SIDataset(mode='train', stage=s)
+    val_dataset = dataset.SIDataset(mode='val', stage=s)
+    test_dataset = dataset.SIDataset(mode='test', stage=s)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['criterion'] = loss.FocalMSELoss()
+    cfg['batch'] = 64
+    cfg['scheduler'] = True
+    cfg['factor'] = 0.1
+    cfg['patience'] = 5
+    cfg['lr'] = 0.0001
+    cfg['model'] = 'resnet_si'
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_si' % s
+    cfg['instance'] = _train_si
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(SiNet().cuda())
+    if os.path.exists(model_pth):
+        print("load pretrained model", model_pth)
+        model.load_state_dict(torch.load(model_pth))
+
+    run_train(model, cfg)
+
+
+def train_resnet_pj(s=2):
+    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
+    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
+    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['criterion'] = loss.FocalMSELoss()
+    cfg['batch'] = 64
+    cfg['scheduler'] = True
+    cfg['factor'] = 0.1
+    cfg['patience'] = 5
+    cfg['lr'] = 0.0001
+    cfg['model'] = 'resnet_pj'
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_pj' % s
+    cfg['instance'] = _train_si
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(SiNet().cuda())
+    if os.path.exists(model_pth):
+        print("load pretrained model", model_pth)
+        model.load_state_dict(torch.load(model_pth))
+
+    run_train(model, cfg)
 
 
 def train_naggn(s=2):
@@ -24,12 +96,14 @@ def train_naggn(s=2):
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 8
+    cfg['batch'] = 64
     cfg['lr'] = 0.00001
     cfg['model'] = 'naggn'
+    cfg['model_dir'] = 'modeldir/stage%d/naggn' % s
     cfg['collate'] = dataset.fly_collate_fn
+    cfg['instance'] = _train_mi
 
-    model_pth = os.path.join('modeldir', cfg['model'], 'model.pth')
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     model = nn.DataParallel(naggn.NAggN().cuda())
     if os.path.exists(model_pth):
         print("load pretrained model", model_pth)
@@ -50,9 +124,11 @@ def train_dragn(s=2):
     cfg['batch'] = 2
     cfg['lr'] = 0.0001
     cfg['model'] = 'dragn'
+    cfg['model_dir'] = 'modeldir/stage%d/dragn' % s
     cfg['collate'] = dataset.fly_collate_fn
+    cfg['instance'] = _train_si
 
-    model_pth = os.path.join('modeldir', cfg['model'], 'model.pth')
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     model = nn.DataParallel(dragn.DRAGN().cuda())
     if os.path.exists(model_pth):
         print("load pretrained model", model_pth)
@@ -60,13 +136,31 @@ def train_dragn(s=2):
     run_train(model, cfg)
 
 
+def _train_si(model, sample_batched):
+    sgene, img, label = sample_batched
+    inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
+    gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
+    model.zero_grad()
+    predict = model(inputs)
+    return sgene, predict, gt
+
+
+def _train_mi(model, sample_batched):
+    sgene, img, label, nslice = sample_batched
+    inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
+    gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
+    nslice = torch.from_numpy(nslice)
+    model.zero_grad()
+    predict = model(inputs, nslice)
+    return sgene, predict, gt
+
+
 def run_train(model, cfg):
     train_loader = DataLoader(cfg['train'], batch_size=cfg['batch'],
                               shuffle=True, num_workers=cfg['nworker'],
                               collate_fn=cfg['collate'])
-    model_dir = os.path.join("./modeldir/%s" % cfg['model'])
-    model_pth = os.path.join(model_dir, "model.pth")
-    writer = tensorboardX.SummaryWriter(model_dir)
+    model_pth = os.path.join(cfg['model_dir'], "model.pth")
+    writer = tensorboardX.SummaryWriter(cfg['model_dir'])
     cfg['writer'] = writer
 
     criterion = cfg['criterion']
@@ -85,16 +179,7 @@ def run_train(model, cfg):
 
         cfg['step'] = e
         for i_batch, sample_batched in enumerate(train_loader):
-            sgene, img, label, nslice = sample_batched
-            # print("train sgene", sgene)
-            # print("train img", img.shape)
-            # print("label", label)
-            # print("train nslice", nslice)
-            inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-            gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
-            nslice = torch.from_numpy(nslice)
-            model.zero_grad()
-            predict = model(inputs, nslice)
+            sgene, predict, gt = cfg['instance'](model, sample_batched)
             loss = criterion(predict, gt)
             loss.backward()
             optimizer.step()
@@ -147,11 +232,7 @@ def run_val(model, cfg):
         tot_loss = 0.0
 
         for i_batch, sample_batched in enumerate(val_loader):
-            sgene, img, label, nslice = sample_batched
-            inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-            gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
-            nslice = torch.from_numpy(nslice)
-            predict = model(inputs, nslice)
+            sgene, predict, gt = cfg['instance'](model, sample_batched)
             loss = criterion(predict, gt)
             tot_loss += loss
 
@@ -184,14 +265,11 @@ def run_test(model, cfg):
         np_score = []
         np_sgene = []
         for i_batch, sample_batched in enumerate(test_loader):
-            sgene, img, label, nslice = sample_batched
-            inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-            nslice = torch.from_numpy(nslice)
-            predict = model(inputs, nslice)
+            sgene, predict, gt = cfg['instance'](model, sample_batched)
             test_pd = util.threshold_tensor_batch(predict)
             np_pd.append(test_pd.data.cpu().numpy())
             np_sgene.extend(sgene)
-            np_label.append(label)
+            np_label.append(gt.data.cpu().numpy())
             np_score.append(predict.data.cpu().numpy())
 
         np_label = np.concatenate(np_label)
@@ -205,11 +283,10 @@ def run_test(model, cfg):
 
         df = pd.DataFrame({'Gene': np_sgene, 'Predicted': np_target})
 
-        model_dir = os.path.join("./modeldir/%s" % cfg['model'])
-        result = os.path.join(model_dir, "%s_%d.csv"
+        result = os.path.join(cfg['model_dir'], "%s_%d.csv"
                               % (cfg['model'], cfg['step']))
         df.to_csv(result, header=True, sep=',', index=False)
 
 
 if __name__ == "__main__":
-    train_naggn()
+    train_naggn(s=3)

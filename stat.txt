@@ -1,0 +1,31 @@
+-------data stat for stage 1-------
+top cv less than k Counter({'maternal': 1835, 'ubiquitous': 156, 'flag_for_volker': 96, 'pole plasm': 78, 'need new term(localised)': 20, 'fertilized egg': 5, 'strong ubiquitous': 4, 'faint ubiquitous': 3})
+stage 1 genes 1829 imgs 2740
+Counter({'maternal': 1835, 'ubiquitous': 156, 'flag_for_volker': 96, 'pole plasm': 78, 'need new term(localised)': 20, 'fertilized egg': 5, 'strong ubiquitous': 4, 'faint ubiquitous': 3})
+
+
+-------data stat for stage 2-------
+stage 2 genes 1610 imgs 6825
+Counter({'ubiquitous': 899, 'cellular blastoderm': 811, 'subset': 365, 'maternal': 325, 'faint ubiquitous': 257, 'dorsal ectoderm anlage in statu nascendi': 225, 'ventral ectoderm anlage in statu nascendi': 199, 'procephalic ectoderm anlage in statu nascendi': 193, 'anlage in statu nascendi': 187, 'posterior endoderm anlage in statu nascendi': 104})
+
+
+-------data stat for stage 3-------
+stage 3 genes 1291 imgs 3909
+Counter({'ubiquitous': 685, 'trunk mesoderm primordium P2': 427, 'head mesoderm primordium P4': 396, 'posterior endoderm primordium P2': 395, 'anterior endoderm anlage': 362, 'ventral ectoderm primordium P2': 325, 'faint ubiquitous': 323, 'procephalic ectoderm anlage': 280, 'hindgut anlage': 184, 'dorsal ectoderm primordium': 172})
+
+
+-------data stat for stage 4-------
+stage 4 genes 1403 imgs 4044
+Counter({'ubiquitous': 664, 'trunk mesoderm primordium': 527, 'posterior endoderm primordium': 499, 'head mesoderm primordium P2': 485, 'anterior endoderm primordium': 470, 'procephalic ectoderm primordium': 368, 'faint ubiquitous': 360, 'ventral nerve cord primordium P3': 336, 'inclusive hindgut primordium': 256, 'ventral ectoderm primordium': 247})
+
+
+-------data stat for stage 5-------
+stage 5 genes 1783 imgs 9411
+Counter({'posterior midgut primordium': 931, 'anterior midgut primordium': 886, 'brain primordium': 625, 'ubiquitous': 612, 'ventral nerve cord primordium': 570, 'trunk mesoderm primordium': 560, 'hindgut proper primordium': 499, 'faint ubiquitous': 397, 'dorsal epidermis primordium': 297, 'foregut primordium': 288})
+
+
+-------data stat for stage 6-------
+stage 6 genes 2452 imgs 14170
+Counter({'embryonic midgut': 1226, 'ventral nerve cord': 901, 'embryonic brain': 877, 'embryonic hindgut': 735, 'embryonic dorsal epidermis': 643, 'embryonic/larval muscle system': 616, 'embryonic central nervous system': 579, 'embryonic ventral epidermis': 572, 'embryonic head epidermis': 434, 'dorsal prothoracic pharyngeal muscle': 408})
+
+

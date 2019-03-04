@@ -51,10 +51,10 @@ def torch_metrics(gt, predict, writer, step, mode="val", score=None):
     lab_sensitivity = npmetrics.label_sensitivity(gt, predict)
     lab_specificity = npmetrics.label_specificity(gt, predict)
 
-    writer.add_scalar("%s sk auc macro" % mode, sk_auc_macro, step)
-    writer.add_scalar("%s sk auc micro" % mode, sk_auc_micro, step)
-    writer.add_scalar("%s sk f1 macro" % mode, sk_f1_macro, step)
-    writer.add_scalar("%s sk f1 micro" % mode, sk_f1_micro, step)
+    writer.add_scalar("%s auc macro sk" % mode, sk_auc_macro, step)
+    writer.add_scalar("%s auc micro sk" % mode, sk_auc_micro, step)
+    writer.add_scalar("%s label f1 macro sk" % mode, sk_f1_macro, step)
+    writer.add_scalar("%s label f1 micro sk" % mode, sk_f1_micro, step)
 
     writer.add_scalar("%s label f1 macro" % mode, lab_f1_macro, step)
     writer.add_scalar("%s label f1 micro" % mode, lab_f1_micro, step)
