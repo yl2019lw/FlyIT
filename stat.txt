@@ -20,7 +20,7 @@ Counter({'ubiquitous': 664, 'trunk mesoderm primordium': 527, 'posterior endoder
 
 
 -------data stat for stage 5-------
-stage 5 genes 1783 imgs 9411
+stage 5 genes 1783 imgs 9410
 Counter({'posterior midgut primordium': 931, 'anterior midgut primordium': 886, 'brain primordium': 625, 'ubiquitous': 612, 'ventral nerve cord primordium': 570, 'trunk mesoderm primordium': 560, 'hindgut proper primordium': 499, 'faint ubiquitous': 397, 'dorsal epidermis primordium': 297, 'foregut primordium': 288})
 
 

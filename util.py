@@ -74,6 +74,22 @@ def torch_metrics(gt, predict, writer, step, mode="val", score=None):
     return lab_f1_macro
 
 
+def write_metrics(pth, gt, predict, score=None):
+    '''write test metrics'''
+    sk_auc_macro = sklearn_auc_macro(gt, score)
+    sk_f1_macro = sklearn_f1_macro(gt, predict)
+    sk_f1_micro = sklearn_f1_micro(gt, predict)
+    lab_sensitivity = npmetrics.label_sensitivity(gt, predict)
+    lab_specificity = npmetrics.label_specificity(gt, predict)
+
+    with open(pth, 'w') as f:
+        f.write('auc:%.4f\n' % sk_auc_macro)
+        f.write('f1_macro:%.4f\n' % sk_f1_macro)
+        f.write('f1_micro:%.4f\n' % sk_f1_micro)
+        f.write('sensitivity:%.4f\n' % lab_sensitivity)
+        f.write('specificity:%.4f\n' % lab_specificity)
+
+
 def threshold_tensor_batch(predict, base=0.5):
     '''make sure at least one label for batch'''
     p_max = torch.max(predict, dim=1)[0]

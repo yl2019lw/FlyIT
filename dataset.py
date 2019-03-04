@@ -20,13 +20,15 @@ def load_by_stage(stage=1):
     a_gene = ann['gene'].unique()
 
     gene = np.intersect1d(i_gene, a_gene)
+    imgdir = os.path.join('data/pic')
 
     d = {}
     for g in gene:
         d[g] = {}
         gene_imgs = []
         for item in img[img['gene'] == g]['image_url'].values:
-            gene_imgs += list(eval(item))
+            gene_imgs += [x for x in list(eval(item))
+                          if os.path.exists(os.path.join(imgdir, x))]
 
         gene_annotations = []
         for item in ann[ann['gene'] == g]['annotation'].values:
@@ -157,10 +159,10 @@ class PJDataset(Dataset):
             nimg = cv2.imread(imgpth, -1)
             nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
             raw_nimgs.append(nimg.transpose(2, 0, 1))
-        raw_nimgs = np.concatenate(raw_nimgs, axis=0)
+        raw_nimgs = np.stack(raw_nimgs, axis=0)
 
         n, c, h, w = raw_nimgs.shape
-        pj_nimg = np.zeros(c, 2*h, 2*w)
+        pj_nimg = np.zeros((c, 2*h, 2*w), dtype=np.float)
         if n == 4:
             pj_nimg[:, 0:h, 0:w] = raw_nimgs[0]
             pj_nimg[:, 0:h, w:2*w] = raw_nimgs[1]

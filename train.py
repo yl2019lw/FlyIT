@@ -9,11 +9,11 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.utils.data.dataloader import default_collate
 import dataset
 import naggn
 import dragn
 import util
-import loss
 import extractor
 
 FV_DIM = 512
@@ -40,14 +40,11 @@ def train_resnet_si(s=2):
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['criterion'] = loss.FocalMSELoss()
     cfg['batch'] = 64
-    cfg['scheduler'] = True
-    cfg['factor'] = 0.1
-    cfg['patience'] = 5
     cfg['lr'] = 0.0001
     cfg['model'] = 'resnet_si'
     cfg['model_dir'] = 'modeldir/stage%d/resnet_si' % s
+    cfg['collate'] = default_collate
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
@@ -60,22 +57,19 @@ def train_resnet_si(s=2):
 
 
 def train_resnet_pj(s=2):
-    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
-    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
-    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
+    train_dataset = dataset.PJDataset(mode='train', stage=s)
+    val_dataset = dataset.PJDataset(mode='val', stage=s)
+    test_dataset = dataset.PJDataset(mode='test', stage=s)
 
     cfg = util.default_cfg()
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['criterion'] = loss.FocalMSELoss()
     cfg['batch'] = 64
-    cfg['scheduler'] = True
-    cfg['factor'] = 0.1
-    cfg['patience'] = 5
     cfg['lr'] = 0.0001
     cfg['model'] = 'resnet_pj'
     cfg['model_dir'] = 'modeldir/stage%d/resnet_pj' % s
+    cfg['collate'] = default_collate
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
@@ -138,8 +132,10 @@ def train_dragn(s=2):
 
 def _train_si(model, sample_batched):
     sgene, img, label = sample_batched
-    inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-    gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
+    # inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
+    # gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
+    inputs = img.type(torch.cuda.FloatTensor)
+    gt = label.type(torch.cuda.FloatTensor)
     model.zero_grad()
     predict = model(inputs)
     return sgene, predict, gt
@@ -275,8 +271,10 @@ def run_test(model, cfg):
         np_label = np.concatenate(np_label)
         np_pd = np.concatenate(np_pd)
         np_score = np.concatenate(np_score)
-        util.torch_metrics(np_label, np_pd, cfg['writer'],
-                           cfg['step'], mode='test', score=np_score)
+        # util.torch_metrics(np_label, np_pd, cfg['writer'],
+        #                    cfg['step'], mode='test', score=np_score)
+        pth = os.path.join(cfg['model_dir'], 'metrics.csv')
+        util.write_metrics(pth, np_label, np_pd, np_score)
 
         np_target = [' '.join([str(x) for x in np.where(item)[0]])
                      for item in np_pd]
@@ -289,4 +287,6 @@ def run_test(model, cfg):
 
 
 if __name__ == "__main__":
-    train_naggn(s=3)
+    # train_naggn(s=3)
+    # train_resnet_si(s=6)
+    train_resnet_pj(s=5)
