@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
+from tqdm import tqdm
 import dataset
 import naggn
 import dragn
@@ -41,7 +42,7 @@ def train_resnet_si(s=2):
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 64
-    cfg['lr'] = 0.0001
+    cfg['lr'] = 0.000001
     cfg['model'] = 'resnet_si'
     cfg['model_dir'] = 'modeldir/stage%d/resnet_si' % s
     cfg['collate'] = default_collate
@@ -50,8 +51,12 @@ def train_resnet_si(s=2):
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     model = nn.DataParallel(SiNet().cuda())
     if os.path.exists(model_pth):
-        print("load pretrained model", model_pth)
-        model.load_state_dict(torch.load(model_pth))
+        # print("load pretrained model", model_pth)
+        # model.load_state_dict(torch.load(model_pth))
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
 
     run_train(model, cfg)
 
@@ -167,14 +172,17 @@ def run_train(model, cfg):
             optimizer, 'max',
             factor=cfg['factor'], patience=cfg['patience'])
 
-    step = 0
-    for e in range(cfg['epochs']):
+    step = cfg['step'] * len(train_loader)
+    min_loss = 1e8
+    max_f1 = 0.0
+    for e in range(cfg['step'], cfg['epochs']):
         print("----run train---", cfg['model'], e)
         model.train()
         st = time.time()
 
         cfg['step'] = e
-        for i_batch, sample_batched in enumerate(train_loader):
+        for i_batch, sample_batched in tqdm(
+                enumerate(train_loader), total=len(train_loader)):
             sgene, predict, gt = cfg['instance'](model, sample_batched)
             loss = criterion(predict, gt)
             loss.backward()
@@ -190,13 +198,8 @@ def run_train(model, cfg):
         print("val loss:", val_loss, "\tf1:", lab_f1_macro)
         if cfg['scheduler']:
             scheduler.step(lab_f1_macro)
-            for g in optimizer.param_groups:
-                writer.add_scalar("lr", g['lr'], e)
-
-        if e == 0:
-            start_loss = val_loss
-            min_loss = start_loss
-            max_f1 = 0.0
+        for g in optimizer.param_groups:
+            writer.add_scalar("lr", g['lr'], e)
 
         # if val_loss > 2 * min_loss:
         #     print("early stopping at %d" % e)
@@ -210,7 +213,8 @@ def run_train(model, cfg):
             if lab_f1_macro > max_f1:
                 max_f1 = lab_f1_macro
                 print("----save best epoch:%d, f1:%f---" % (e, max_f1))
-            torch.save(model.state_dict(), model_pth)
+            # torch.save(model.state_dict(), model_pth)
+            torch.save({'epoch': e, 'model': model.state_dict()}, model_pth)
             run_test(model, cfg)
 
 
@@ -288,5 +292,5 @@ def run_test(model, cfg):
 
 if __name__ == "__main__":
     # train_naggn(s=3)
-    # train_resnet_si(s=6)
-    train_resnet_pj(s=6)
+    train_resnet_si(s=6)
+    # train_resnet_pj(s=6)

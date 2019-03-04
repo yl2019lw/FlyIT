@@ -12,6 +12,7 @@ NUM_CLASSES = 10
 def default_cfg():
     cfg = {}
     cfg['epochs'] = 10000
+    cfg['step'] = 0
     cfg['batch'] = 96
     cfg['nworker'] = psutil.cpu_count()
     cfg['criterion'] = torch.nn.BCELoss()
@@ -71,7 +72,7 @@ def torch_metrics(gt, predict, writer, step, mode="val", score=None):
                           sl_precision[i], step)
         writer.add_scalar("%s sl_%d_recall" % (mode, i),
                           sl_recall[i], step)
-    return lab_f1_macro
+    return sk_f1_macro
 
 
 def write_metrics(pth, gt, predict, score=None):
