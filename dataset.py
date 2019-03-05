@@ -201,7 +201,7 @@ class DrosophilaDataset(Dataset):
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
         tl = int(len(genes) * 0.5)
-        vl = int(len(genes) * 0.75)
+        vl = int(len(genes) * 0.6)
         if mode == 'train':
             self.genes = genes[:tl]
         elif mode == 'test':

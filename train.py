@@ -96,17 +96,19 @@ def train_naggn(s=2):
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 64
-    cfg['lr'] = 0.00001
-    cfg['model'] = 'naggn'
-    cfg['model_dir'] = 'modeldir/stage%d/naggn' % s
+    cfg['lr'] = 0.0001
+    cfg['model'] = 'naggn_l1'
+    cfg['model_dir'] = 'modeldir/stage%d/naggn_l1' % s
     cfg['collate'] = dataset.fly_collate_fn
     cfg['instance'] = _train_mi
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(naggn.NAggN().cuda())
+    model = nn.DataParallel(naggn.NAggN(agg='l1').cuda())
     if os.path.exists(model_pth):
-        print("load pretrained model", model_pth)
-        model.load_state_dict(torch.load(model_pth))
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
 
     run_train(model, cfg)
 
@@ -291,6 +293,6 @@ def run_test(model, cfg):
 
 
 if __name__ == "__main__":
-    # train_naggn(s=3)
-    train_resnet_si(s=6)
+    train_naggn(s=2)
+    # train_resnet_si(s=6)
     # train_resnet_pj(s=6)

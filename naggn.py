@@ -23,8 +23,8 @@ class L1Aggregator(nn.Module):
 
     def forward(self, fvs):
         '''fvs: ns x nd, r0: 1 x nd'''
-        norm = torch.norm(fvs, p=2, dim=1, keepdim=True)
-        fvs = torch.div(fvs, norm.expand_as(fvs))
+        # norm = torch.norm(fvs, p=2, dim=1, keepdim=True)
+        # fvs = torch.div(fvs, norm.expand_as(fvs))
         ek = torch.mm(self.q0, fvs.t())
         ak = torch.nn.Softmax(dim=1)(ek)
         r0 = torch.mm(ak, fvs)
@@ -54,10 +54,15 @@ class L2Aggregator(nn.Module):
 
 class NAggN(nn.Module):
 
-    def __init__(self, k=10):
+    def __init__(self, k=10, agg='l1'):
         super(NAggN, self).__init__()
         self.fvextractor = extractor.Resnet()
-        self.aggregator = L1Aggregator()
+        if agg == 'l1':
+            self.aggregator = L1Aggregator()
+        elif agg == 'l2':
+            self.aggregator = L2Aggregator()
+        else:
+            raise Exception("unknown aggregator")
         self.proj = nn.Linear(FV_DIM, k)
 
     def forward(self, x, nslice):
