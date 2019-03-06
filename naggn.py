@@ -6,8 +6,6 @@ import torch.nn as nn
 import extractor
 import gpustat
 
-FV_DIM = 512
-
 
 def get_gpu_usage(device=1):
     gpu_stats = gpustat.new_query()
@@ -17,9 +15,9 @@ def get_gpu_usage(device=1):
 
 class L1Aggregator(nn.Module):
     '''single attention block'''
-    def __init__(self):
+    def __init__(self, fvdim):
         super(L1Aggregator, self).__init__()
-        self.q0 = nn.Parameter(torch.ones((1, FV_DIM)))
+        self.q0 = nn.Parameter(torch.ones((1, fvdim)))
 
     def forward(self, fvs):
         '''fvs: ns x nd, r0: 1 x nd'''
@@ -33,11 +31,11 @@ class L1Aggregator(nn.Module):
 
 class L2Aggregator(nn.Module):
     '''cascaded two attention blocks'''
-    def __init__(self):
+    def __init__(self, fvdim):
         super(L2Aggregator, self).__init__()
-        self.q0 = nn.Parameter(torch.zeros((1, FV_DIM)))
-        self.W = nn.Parameter(torch.randn(FV_DIM, FV_DIM))
-        self.b = nn.Parameter(torch.zeros(1, FV_DIM))
+        self.q0 = nn.Parameter(torch.zeros((1, fvdim)))
+        self.W = nn.Parameter(torch.randn(fvdim, fvdim))
+        self.b = nn.Parameter(torch.zeros(1, fvdim))
 
     def forward(self, fvs):
         e0k = torch.mm(self.q0, fvs.t())
@@ -54,16 +52,17 @@ class L2Aggregator(nn.Module):
 
 class NAggN(nn.Module):
 
-    def __init__(self, k=10, agg='l1'):
+    def __init__(self, k=10, agg='l1', nblock=4):
         super(NAggN, self).__init__()
-        self.fvextractor = extractor.Resnet()
+        self.fvextractor = extractor.Resnet(nblock)
+        fvdim = 512 // (2 ** (4 - nblock))
         if agg == 'l1':
-            self.aggregator = L1Aggregator()
+            self.aggregator = L1Aggregator(fvdim)
         elif agg == 'l2':
-            self.aggregator = L2Aggregator()
+            self.aggregator = L2Aggregator(fvdim)
         else:
             raise Exception("unknown aggregator")
-        self.proj = nn.Linear(FV_DIM, k)
+        self.proj = nn.Linear(fvdim, k)
 
     def forward(self, x, nslice):
         '''x: nb x ns x c x h x w'''

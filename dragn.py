@@ -5,8 +5,6 @@ import torch
 import torch.nn as nn
 import extractor
 
-FV_DIM = 512
-
 
 class DRAggregator(nn.Module):
 
@@ -28,11 +26,12 @@ class DRAggregator(nn.Module):
 
 class DRAGN(nn.Module):
 
-    def __init__(self, k=10):
+    def __init__(self, k=10, nblock=4):
         super(DRAGN, self).__init__()
-        self.fvextractor = extractor.ConvResnet()
+        self.fvextractor = extractor.ConvResnet(nblock)
+        fvdim = 512 // (2 ** (4 - nblock))
         self.aggregator = DRAggregator()
-        self.proj = nn.Linear(FV_DIM, k)
+        self.proj = nn.Linear(fvdim, k)
 
     def forward(self, x, nslice):
         '''x: nb x ns x c x h x w'''

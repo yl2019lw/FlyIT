@@ -17,15 +17,14 @@ import dragn
 import util
 import extractor
 
-FV_DIM = 512
-
 
 class SiNet(nn.Module):
 
-    def __init__(self, k=10):
+    def __init__(self, k=10, nblock=4):
         super(SiNet, self).__init__()
-        self.fvextractor = extractor.Resnet()
-        self.proj = nn.Linear(FV_DIM, k)
+        self.fvextractor = extractor.Resnet(nblock)
+        fvdim = 512 // (2 ** (4 - nblock))
+        self.proj = nn.Linear(fvdim, k)
 
     def forward(self, x):
         fv = self.fvextractor(x)
@@ -49,7 +48,7 @@ def train_resnet_si(s=2):
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(SiNet().cuda())
+    model = nn.DataParallel(SiNet(nblock=4).cuda())
     if os.path.exists(model_pth):
         # print("load pretrained model", model_pth)
         # model.load_state_dict(torch.load(model_pth))
@@ -95,7 +94,7 @@ def train_naggn(s=2):
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 64
+    cfg['batch'] = 32
     cfg['lr'] = 0.0001
     cfg['model'] = 'naggn_l1'
     cfg['model_dir'] = 'modeldir/stage%d/naggn_l1' % s
