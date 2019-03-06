@@ -94,8 +94,8 @@ def train_naggn(s=2):
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 32
-    cfg['lr'] = 0.0001
+    cfg['batch'] = 64
+    cfg['lr'] = 0.000001
     cfg['model'] = 'naggn_l1'
     cfg['model_dir'] = 'modeldir/stage%d/naggn_l1' % s
     cfg['collate'] = dataset.fly_collate_fn
@@ -138,8 +138,6 @@ def train_dragn(s=2):
 
 def _train_si(model, sample_batched):
     sgene, img, label = sample_batched
-    # inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-    # gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
     inputs = img.type(torch.cuda.FloatTensor)
     gt = label.type(torch.cuda.FloatTensor)
     model.zero_grad()
@@ -149,9 +147,9 @@ def _train_si(model, sample_batched):
 
 def _train_mi(model, sample_batched):
     sgene, img, label, nslice = sample_batched
-    inputs = torch.from_numpy(img).type(torch.cuda.FloatTensor)
-    gt = torch.from_numpy(label).type(torch.cuda.FloatTensor)
-    nslice = torch.from_numpy(nslice)
+    inputs = img.type(torch.cuda.FloatTensor)
+    gt = label.type(torch.cuda.FloatTensor)
+    nslice = nslice.type(torch.cuda.IntTensor)
     model.zero_grad()
     predict = model(inputs, nslice)
     return sgene, predict, gt

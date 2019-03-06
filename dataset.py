@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import pandas as pd
+import torch
 from torch.utils.data import Dataset
 from collections import Counter
 
@@ -249,8 +250,10 @@ def fly_collate_fn(batch):
                          )
         pad_imgs.append(pad_img)
 
-    return (np.array(bgene), np.array(pad_imgs),
-            np.array(blabel), np.array(nslice))
+    return (np.array(bgene),
+            torch.from_numpy(np.array(pad_imgs)),
+            torch.from_numpy(np.array(blabel)),
+            torch.from_numpy(np.array(nslice)))
 
 
 if __name__ == "__main__":
