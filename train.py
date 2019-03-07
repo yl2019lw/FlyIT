@@ -14,6 +14,7 @@ from tqdm import tqdm
 import dataset
 import naggn
 import dragn
+import transformer
 import util
 import extractor
 
@@ -133,6 +134,33 @@ def train_dragn(s=2):
     if os.path.exists(model_pth):
         print("load pretrained model", model_pth)
         model.load_state_dict(torch.load(model_pth))
+    run_train(model, cfg)
+
+
+def train_transformer(s=2):
+    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
+    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
+    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['batch'] = 32
+    cfg['lr'] = 0.00001
+    cfg['model'] = 'transformer'
+    cfg['model_dir'] = 'modeldir/stage%d/transformer' % s
+    cfg['collate'] = dataset.fly_collate_fn
+    cfg['instance'] = _train_mi
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(transformer.E2ETransformer().cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
     run_train(model, cfg)
 
 
@@ -290,6 +318,7 @@ def run_test(model, cfg):
 
 
 if __name__ == "__main__":
-    train_naggn(s=2)
+    train_transformer(s=2)
+    # train_naggn(s=2)
     # train_resnet_si(s=6)
     # train_resnet_pj(s=6)

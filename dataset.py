@@ -99,8 +99,8 @@ class SIDataset(Dataset):
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
-        tl = int(len(genes) * 0.5)
-        vl = int(len(genes) * 0.75)
+        tl = int(len(genes) * 0.4)
+        vl = int(len(genes) * 0.5)
         if mode == 'train':
             self.genes = genes[:tl]
         elif mode == 'test':
@@ -137,8 +137,8 @@ class PJDataset(Dataset):
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
-        tl = int(len(genes) * 0.5)
-        vl = int(len(genes) * 0.75)
+        tl = int(len(genes) * 0.4)
+        vl = int(len(genes) * 0.5)
         if mode == 'train':
             self.genes = genes[:tl]
         elif mode == 'test':
@@ -201,8 +201,8 @@ class DrosophilaDataset(Dataset):
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
-        tl = int(len(genes) * 0.5)
-        vl = int(len(genes) * 0.75)
+        tl = int(len(genes) * 0.4)
+        vl = int(len(genes) * 0.5)
         if mode == 'train':
             self.genes = genes[:tl]
         elif mode == 'test':
