@@ -78,10 +78,12 @@ def train_resnet_pj(s=2):
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(SiNet().cuda())
+    model = nn.DataParallel(SiNet(nblock=4).cuda())
     if os.path.exists(model_pth):
-        print("load pretrained model", model_pth)
-        model.load_state_dict(torch.load(model_pth))
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
 
     run_train(model, cfg)
 
@@ -320,5 +322,5 @@ def run_test(model, cfg):
 if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
-    train_resnet_si(s=2)
-    # train_resnet_pj(s=6)
+    # train_resnet_si(s=2)
+    train_resnet_pj(s=2)
