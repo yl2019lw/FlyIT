@@ -115,6 +115,43 @@ def train_naggn(s=2):
     run_train(model, cfg)
 
 
+def train_prefv_naggn(s=2):
+    '''load fvextractor from pretrained resnet_si'''
+    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
+    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
+    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['batch'] = 32
+    cfg['lr'] = 0.0001
+    cfg['model'] = 'prefv_naggn_l2'
+    cfg['model_dir'] = 'modeldir/stage%d/prefv_naggn_l2' % s
+    cfg['collate'] = dataset.fly_collate_fn
+    cfg['instance'] = _train_mi
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(naggn.NAggN(agg='l2').cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+    else:
+        fv_model_dir = 'modeldir/stage%d/resnet_si' % s
+        fv_model_pth = os.path.join(fv_model_dir, 'model.pth')
+        ckp = torch.load(fv_model_pth)
+        model.state_dict().update(ckp['model'])
+        print("load fvextractor from pretrained resnet_si")
+
+    # for p in model.module.fvextractor.parameters():
+    #     p.require_grad = False
+
+    run_train(model, cfg)
+
+
 def train_dragn(s=2):
     train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
     val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
@@ -322,5 +359,6 @@ def run_test(model, cfg):
 if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
+    train_prefv_naggn(s=6)
     # train_resnet_si(s=2)
-    train_resnet_pj(s=2)
+    # train_resnet_pj(s=2)

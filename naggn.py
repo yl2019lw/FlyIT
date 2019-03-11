@@ -50,6 +50,15 @@ class L2Aggregator(nn.Module):
         return r1
 
 
+class AvgAggregator(nn.Module):
+    '''aggregate fvs by average'''
+    def __init__(self):
+        super(AvgAggregator, self).__init__()
+
+    def forward(self, fvs):
+        return torch.unsqueeze(torch.mean(fvs, dim=0), dim=0)
+
+
 class NAggN(nn.Module):
 
     def __init__(self, k=10, agg='l1', nblock=4):
@@ -60,6 +69,8 @@ class NAggN(nn.Module):
             self.aggregator = L1Aggregator(fvdim)
         elif agg == 'l2':
             self.aggregator = L2Aggregator(fvdim)
+        elif agg == 'avg':
+            self.aggregator = AvgAggregator()
         else:
             raise Exception("unknown aggregator")
         self.proj = nn.Linear(fvdim, k)
