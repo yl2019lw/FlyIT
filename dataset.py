@@ -65,10 +65,10 @@ def filter_top_cv(d, k=10):
     return fd, top_cv
 
 
-def data_stat(stage=1):
+def data_stat(stage=1, k=10):
     print("-------data stat for stage %d-------" % stage)
     d = load_by_stage(stage=stage)
-    d, top_cv = filter_top_cv(d)
+    d, top_cv = filter_top_cv(d, k)
     genes = list(d.keys())
     imgs = []
     all_cv = []
@@ -94,9 +94,9 @@ def generate_pj_samples(d, genes, count=4):
 class SIDataset(Dataset):
     '''Single Instance Dataset'''
 
-    def __init__(self, mode='train', stage=2):
+    def __init__(self, mode='train', stage=2, k=10):
         super(SIDataset, self).__init__()
-        self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
+        self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
         tl = int(len(genes) * 0.4)
@@ -132,9 +132,9 @@ class SIDataset(Dataset):
 class PJDataset(Dataset):
     '''Pin Jie Dataset as ltg does'''
 
-    def __init__(self, mode='train', stage=2):
+    def __init__(self, mode='train', stage=2, k=10):
         super(PJDataset, self).__init__()
-        self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
+        self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
         tl = int(len(genes) * 0.4)
@@ -197,8 +197,8 @@ class PJDataset(Dataset):
 
 class DrosophilaDataset(Dataset):
 
-    def __init__(self, mode='train', stage=2):
-        self.db, self.top_cv = filter_top_cv(load_by_stage(stage))
+    def __init__(self, mode='train', stage=2, k=10):
+        self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
         genes = list(self.db.keys())
         tl = int(len(genes) * 0.4)
@@ -258,4 +258,4 @@ def fly_collate_fn(batch):
 
 if __name__ == "__main__":
     for s in list(range(1, 7)):
-        data_stat(s)
+        data_stat(s, k=20)

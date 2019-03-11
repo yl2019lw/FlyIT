@@ -6,7 +6,7 @@ import psutil
 import npmetrics
 from sklearn import metrics
 
-NUM_CLASSES = 10
+NUM_CLASSES = 20
 
 
 def default_cfg():

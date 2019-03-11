@@ -21,7 +21,7 @@ import extractor
 
 class SiNet(nn.Module):
 
-    def __init__(self, k=10, nblock=4):
+    def __init__(self, nblock=4, k=10):
         super(SiNet, self).__init__()
         self.fvextractor = extractor.Resnet(nblock)
         fvdim = 512 // (2 ** (4 - nblock))
@@ -32,24 +32,24 @@ class SiNet(nn.Module):
         return torch.sigmoid(self.proj(fv))
 
 
-def train_resnet_si(s=2):
-    train_dataset = dataset.SIDataset(mode='train', stage=s)
-    val_dataset = dataset.SIDataset(mode='val', stage=s)
-    test_dataset = dataset.SIDataset(mode='test', stage=s)
+def train_resnet_si(s=2, k=10):
+    train_dataset = dataset.SIDataset(mode='train', stage=s, k=k)
+    val_dataset = dataset.SIDataset(mode='val', stage=s, k=k)
+    test_dataset = dataset.SIDataset(mode='test', stage=s, k=k)
 
     cfg = util.default_cfg()
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 64
-    cfg['lr'] = 0.000001
-    cfg['model'] = 'resnet_si'
-    cfg['model_dir'] = 'modeldir/stage%d/resnet_si' % s
+    cfg['lr'] = 0.0001
+    cfg['model'] = 'resnet_si_k%d' % k
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d' % (s, k)
     cfg['collate'] = default_collate
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(SiNet(nblock=4).cuda())
+    model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
     if os.path.exists(model_pth):
         # print("load pretrained model", model_pth)
         # model.load_state_dict(torch.load(model_pth))
@@ -359,6 +359,6 @@ def run_test(model, cfg):
 if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
-    train_prefv_naggn(s=6)
-    # train_resnet_si(s=2)
+    # train_prefv_naggn(s=6)
+    train_resnet_si(s=3, k=20)
     # train_resnet_pj(s=2)

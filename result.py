@@ -33,5 +33,6 @@ def merge_result(model='resnet_si'):
 
 
 if __name__ == "__main__":
-    merge_result('resnet_pj')
+    # merge_result('resnet_pj')
     # merge_result("resnet_si")
+    merge_result('resnet_si_k20')
