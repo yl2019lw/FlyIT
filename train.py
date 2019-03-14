@@ -32,19 +32,27 @@ class SiNet(nn.Module):
         return torch.sigmoid(self.proj(fv))
 
 
-def train_resnet_si(s=2, k=10):
-    train_dataset = dataset.SIDataset(mode='train', stage=s, k=k)
-    val_dataset = dataset.SIDataset(mode='val', stage=s, k=k)
-    test_dataset = dataset.SIDataset(mode='test', stage=s, k=k)
+def train_resnet_si(s=2, k=10, val_index=4):
+    train_dataset = dataset.SIDataset(
+        mode='train', stage=s, k=k, val_index=val_index)
+    val_dataset = dataset.SIDataset(
+        mode='val', stage=s, k=k, val_index=val_index)
+    test_dataset = dataset.SIDataset(
+        mode='test', stage=s, k=k, val_index=val_index)
 
     cfg = util.default_cfg()
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 64
+    cfg['batch'] = 128
+    # from loss import FECLoss
+    # cfg['criterion'] = FECLoss(alpha=64)
+    cfg['scheduler'] = True
+    cfg['decay'] = 0.01
     cfg['lr'] = 0.0001
-    cfg['model'] = 'resnet_si_k%d' % k
-    cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d' % (s, k)
+    cfg['model'] = 'resnet_si_k%d_val%d' % (k, val_index)
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d_val%d' % (
+        s, k, val_index)
     cfg['collate'] = default_collate
     cfg['instance'] = _train_si
 
@@ -356,9 +364,84 @@ def run_test(model, cfg):
         df.to_csv(result, header=True, sep=',', index=False)
 
 
+def sequence_train():
+    import multiprocessing as mp
+    for s in [6, 5, 4, 3, 2]:
+        for val_index in [4, 3, 2, 1, 0]:
+            p = mp.Process(target=train_resnet_si, args=(s, 10, val_index))
+            p.start()
+            p.join()
+
+
+def run_test_score(model, cfg):
+    print("----run test score---", cfg['model'])
+    model.eval()
+    with torch.no_grad():
+        test_loader = DataLoader(cfg['test'], batch_size=cfg['batch'],
+                                 shuffle=False, num_workers=cfg['nworker'],
+                                 collate_fn=cfg['collate'])
+        np_label = []
+        np_pd = []
+        np_score = []
+        np_sgene = []
+        for i_batch, sample_batched in enumerate(test_loader):
+            sgene, predict, gt = cfg['instance'](model, sample_batched)
+            test_pd = util.threshold_tensor_batch(predict)
+            np_pd.append(test_pd.data.cpu().numpy())
+            np_sgene.extend(sgene)
+            np_label.append(gt.data.cpu().numpy())
+            np_score.append(predict.data.cpu().numpy())
+
+        np_label = np.concatenate(np_label)
+        np_pd = np.concatenate(np_pd)
+        np_score = np.concatenate(np_score)
+
+        return np_score, np_label
+
+
+def run_kfold_test(k=10):
+    for s in [6, 5, 4, 3, 2]:
+        test_dataset = dataset.SIDataset(mode='test', stage=s, k=k)
+
+        s_dir = 'modeldir/stage%d' % s
+        s_score = []
+        s_label = []
+        for val_index in [4, 3, 2, 1, 0]:
+            m_dir = '%s/resnet_si_k%d_val%d' % (s_dir, k, val_index)
+
+            model_pth = os.path.join(m_dir, 'model.pth')
+
+            model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
+            ckp = torch.load(model_pth)
+            model.load_state_dict(ckp['model'])
+
+            cfg = util.default_cfg()
+            cfg['test'] = test_dataset
+            cfg['batch'] = 128
+            cfg['collate'] = default_collate
+            cfg['instance'] = _train_si
+            cfg['model'] = m_dir
+
+            np_score, np_label = run_test_score(model, cfg)
+            s_score.append(np_score)
+            s_label.append(np_label)
+
+        m_score = np.mean(np.stack(s_score, axis=0), axis=0)
+        print("m_score", m_score.shape, 'np_label', np_label.shape)
+        np_pd = (m_score > 0.5).astype(np.int)
+
+        mean_dir = '%s/resnet_si_k%d_mean' % (s_dir, k)
+        if not os.path.exists(mean_dir):
+            os.mkdir(mean_dir)
+        pth = os.path.join(mean_dir, 'metrics.csv')
+        util.write_metrics(pth, np_label, np_pd, np_score)
+
+
 if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
     # train_prefv_naggn(s=6)
-    train_resnet_si(s=3, k=20)
+    # train_resnet_si(s=2, k=10, val_index=4)
     # train_resnet_pj(s=2)
+    # sequence_train()
+    run_kfold_test()

@@ -6,12 +6,12 @@ import psutil
 import npmetrics
 from sklearn import metrics
 
-NUM_CLASSES = 20
+NUM_CLASSES = 10
 
 
 def default_cfg():
     cfg = {}
-    cfg['epochs'] = 10000
+    cfg['epochs'] = 100
     cfg['step'] = 0
     cfg['batch'] = 96
     cfg['nworker'] = psutil.cpu_count()

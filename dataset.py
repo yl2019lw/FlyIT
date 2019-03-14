@@ -8,6 +8,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from collections import Counter
+from imgaug import augmenters as iaa
 
 
 def load_by_stage(stage=1):
@@ -91,22 +92,54 @@ def generate_pj_samples(d, genes, count=4):
     return gene_imgs
 
 
-class SIDataset(Dataset):
-    '''Single Instance Dataset'''
+def aug():
+    hf = iaa.Fliplr(0.5)
+    vf = iaa.Flipud(0.5)
+    blur = iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1)))
+    contrast = iaa.Sometimes(
+        0.5, iaa.ContrastNormalization((0.8, 1.2)))
+    trfm = iaa.Sequential([hf, vf, blur, contrast])
+    return trfm
 
-    def __init__(self, mode='train', stage=2, k=10):
+
+def split_train_val(l, val_index=4, kfold=5):
+    '''kfold split train val'''
+    csize = len(l) // kfold
+    chunk_item = [l[c:c+csize] for c in range(0, len(l), csize)]
+
+    train_item = []
+    val_item = []
+
+    all_index = list(range(kfold))
+    all_index.remove(val_index)
+
+    val_item = chunk_item[val_index]
+    for i in all_index:
+        train_item.extend(chunk_item[i])
+
+    return train_item, val_item
+
+
+class SIDataset(Dataset):
+    '''Single Instance Dataset, k class'''
+
+    def __init__(self, mode='train', stage=2, k=10, val_index=4):
         super(SIDataset, self).__init__()
+        self.mode = mode
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
-        genes = list(self.db.keys())
-        tl = int(len(genes) * 0.4)
-        vl = int(len(genes) * 0.5)
+        genes = list(sorted(self.db.keys()))
+        half = int(len(genes) * 0.5)
+        tv_genes = genes[:half]
+        test_genes = genes[half:]
+        train_genes, val_genes = split_train_val(tv_genes, val_index)
         if mode == 'train':
-            self.genes = genes[:tl]
-        elif mode == 'test':
-            self.genes = genes[vl:]
+            self.genes = train_genes
+            self.aug = aug()
+        elif mode == 'val':
+            self.genes = val_genes
         else:
-            self.genes = genes[tl:vl]
+            self.genes = test_genes
 
         self.gene_imgs = [(gene, img) for gene in self.genes
                           for img in self.db[gene]['img']]
@@ -126,6 +159,9 @@ class SIDataset(Dataset):
         for ann in gene_anns:
             anns[self.top_cv.index(ann)] = 1
 
+        if self.mode == 'train':
+            nimg = self.aug.augment_image(nimg)
+
         return gene, nimg, anns
 
 
@@ -136,7 +172,7 @@ class PJDataset(Dataset):
         super(PJDataset, self).__init__()
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
-        genes = list(self.db.keys())
+        genes = list(sorted(self.db.keys()))
         tl = int(len(genes) * 0.4)
         vl = int(len(genes) * 0.5)
         if mode == 'train':
@@ -200,7 +236,7 @@ class DrosophilaDataset(Dataset):
     def __init__(self, mode='train', stage=2, k=10):
         self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
         self.nclass = len(self.top_cv)
-        genes = list(self.db.keys())
+        genes = list(sorted(self.db.keys()))
         tl = int(len(genes) * 0.4)
         vl = int(len(genes) * 0.5)
         if mode == 'train':
