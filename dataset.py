@@ -82,6 +82,46 @@ def data_stat(stage=1, k=10):
     print("\n")
 
 
+def dataset_tvt_stat(s=2, k=10):
+    print("---dataset train/val/test stat stage:%d, k:%d---" % (s, k))
+    data_stat(stage=s, k=k)
+
+    val_index = 4
+    train = SIDataset(mode='train', stage=s, k=k, val_index=val_index)
+    val = SIDataset(mode='val', stage=s, k=k, val_index=val_index)
+    test = SIDataset(mode='test', stage=s, k=k, val_index=val_index)
+
+    d = train.db
+
+    def count_gene(genes):
+        gene_cv = []
+        img_cv = []
+        for g in genes:
+            gene_cv += d[g]['ann']
+            for img in d[g]['ann']:
+                img_cv += d[g]['ann']
+        gene_count = Counter(gene_cv)
+        img_count = Counter(img_cv)
+        return gene_count, img_count
+
+    train_gc, train_ic = count_gene(train.genes)
+    val_gc, val_ic = count_gene(val.genes)
+    test_gc, test_ic = count_gene(test.genes)
+
+    top_cv = train.top_cv
+
+    print("--------gene count---------")
+    for cv in top_cv:
+        print("cv:%s\n \t  train:%d, val:%d, test:%d" % (
+            cv, train_gc[cv], val_gc[cv], test_gc[cv]))
+
+    print('\n')
+    print("--------img count---------")
+    for cv in top_cv:
+        print("cv:%s\n \t train:%d, val:%d, test:%d" % (
+            cv, train_ic[cv], val_ic[cv], test_ic[cv]))
+
+
 def generate_pj_samples(d, genes, count=4):
     gene_imgs = []
     for gene in genes:
@@ -293,5 +333,6 @@ def fly_collate_fn(batch):
 
 
 if __name__ == "__main__":
-    for s in list(range(1, 7)):
-        data_stat(s, k=20)
+    # for s in list(range(1, 7)):
+    #     data_stat(s, k=20)
+    dataset_tvt_stat()

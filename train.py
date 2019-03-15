@@ -484,7 +484,7 @@ if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
     # train_prefv_naggn(s=6)
-    train_resnet_si(s=2, k=10, val_index=3)
+    train_resnet_si(s=2, k=10, val_index=4)
     # train_resnet_pj(s=2)
     # sequence_train()
     # run_kfold_test()
