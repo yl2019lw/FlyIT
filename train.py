@@ -7,7 +7,6 @@ import tensorboardX
 import numpy as np
 import pandas as pd
 import torch
-import torchvision
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.utils.data.dataloader import default_collate
@@ -17,126 +16,7 @@ import naggn
 import dragn
 import transformer
 import util
-import extractor
-import senet
-
-
-class SiNet(nn.Module):
-
-    def __init__(self, nblock=4, k=10):
-        super(SiNet, self).__init__()
-        self.fvextractor = extractor.Resnet(nblock)
-        fvdim = 512 // (2 ** (4 - nblock))
-        self.proj = nn.Linear(fvdim, k)
-
-    def forward(self, x):
-        fv = self.fvextractor(x)
-        return torch.sigmoid(self.proj(fv))
-
-
-class SmallNet(nn.Module):
-
-    def __init__(self, k=10):
-        super(SmallNet, self).__init__()
-        self.features = nn.Sequential(
-            nn.Conv2d(3, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            nn.BatchNorm2d(128),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(128, 256, kernel_size=3, padding=1),
-            nn.BatchNorm2d(256),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(256, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(512, 512, kernel_size=3, padding=1),
-            nn.BatchNorm2d(512),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2)
-        )
-        self.avgpool = nn.AdaptiveAvgPool2d((4, 10))
-        self.classifier = nn.Sequential(
-            nn.Linear(512 * 4 * 10, 4096),
-            nn.ReLU(True),
-            nn.Dropout(),
-            nn.Linear(4096, k),
-        )
-
-        self._init_weights()
-
-    def _init_weights(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(
-                    m.weight, mode='fan_out', nonlinearity='relu')
-                if m.bias is not None:
-                    nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.BatchNorm2d):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
-            elif isinstance(m, nn.Linear):
-                nn.init.normal_(m.weight, 0, 0.01)
-                nn.init.constant_(m.bias, 0)
-
-    def forward(self, x):
-        x = self.features(x)
-        x = self.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.classifier(x)
-        return torch.sigmoid(x)
-
-
-class VggNet(nn.Module):
-    def __init__(self, k=10):
-        super(VggNet, self).__init__()
-        self.model = torchvision.models.vgg11_bn(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d((4, 10))
-        self.model.classifier = nn.Sequential(
-            nn.Linear(512 * 4 * 10, 1024),
-            nn.ReLU(True),
-            nn.Dropout(),
-            # nn.Linear(4096, 4096),
-            # nn.ReLU(True),
-            # nn.Dropout(),
-            nn.Linear(1024, k),
-        )
-
-    def forward(self, x):
-        x = self.model.features(x)
-        x = self.model.avgpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.model.classifier(x)
-        return torch.sigmoid(x)
-
-
-class Resnet50(nn.Module):
-
-    def __init__(self, k=10):
-        super(Resnet50, self).__init__()
-        self.model = torchvision.models.resnet50(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.model.fc = nn.Linear(2048, k)
-
-    def forward(self, x):
-        return torch.sigmoid(self.model(x))
-
-
-class Resnet101(nn.Module):
-
-    def __init__(self, k=10):
-        super(Resnet101, self).__init__()
-        self.model = torchvision.models.resnet101(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.model.fc = nn.Linear(2048, k)
-
-    def forward(self, x):
-        return torch.sigmoid(self.model(x))
+import sinet
 
 
 def train_senet_si(s=2, k=10, val_index=4):
@@ -162,7 +42,7 @@ def train_senet_si(s=2, k=10, val_index=4):
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(senet.FlySENet(k=k).cuda())
+    model = nn.DataParallel(sinet.FlySENet(k=k).cuda())
     if os.path.exists(model_pth):
         ckp = torch.load(model_pth)
         model.load_state_dict(ckp['model'])
@@ -184,12 +64,14 @@ def train_resnet_si(s=2, k=10, val_index=4):
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
-    cfg['batch'] = 48
+    cfg['batch'] = 64
     # from loss import FECLoss
     # cfg['criterion'] = FECLoss(alpha=64)
+    cfg['epochs'] = 1000
     cfg['scheduler'] = True
     cfg['decay'] = 0.01
     cfg['lr'] = 0.0001
+    cfg['patience'] = 20
     # cfg['model'] = 'resnet_si_k%d_val%d' % (k, val_index)
     # cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d_val%d' % (
     #     s, k, val_index)
@@ -201,7 +83,7 @@ def train_resnet_si(s=2, k=10, val_index=4):
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     # model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
-    model = nn.DataParallel(SmallNet(k=k).cuda())
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
     if os.path.exists(model_pth):
         # print("load pretrained model", model_pth)
         # model.load_state_dict(torch.load(model_pth))
@@ -230,7 +112,7 @@ def train_resnet_pj(s=2):
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(SiNet(nblock=4).cuda())
+    model = nn.DataParallel(sinet.SiNet(nblock=4).cuda())
     if os.path.exists(model_pth):
         ckp = torch.load(model_pth)
         model.load_state_dict(ckp['model'])
@@ -432,7 +314,7 @@ def run_train(model, cfg):
         for g in optimizer.param_groups:
             writer.add_scalar("lr", g['lr'], e)
 
-            if cfg['scheduler'] and g['lr'] > 1e-6:
+            if cfg['scheduler'] and g['lr'] > 1e-5:
                 scheduler.step(lab_f1_macro)
                 break
 
@@ -572,7 +454,7 @@ def run_kfold_test(k=10):
 
             model_pth = os.path.join(m_dir, 'model.pth')
 
-            model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
+            model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
             ckp = torch.load(model_pth)
             model.load_state_dict(ckp['model'])
 
@@ -602,7 +484,7 @@ if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
     # train_prefv_naggn(s=6)
-    train_resnet_si(s=2, k=10, val_index=4)
+    train_resnet_si(s=2, k=10, val_index=3)
     # train_resnet_pj(s=2)
     # sequence_train()
     # run_kfold_test()
