@@ -66,62 +66,6 @@ def filter_top_cv(d, k=10):
     return fd, top_cv
 
 
-def data_stat(stage=1, k=10):
-    print("-------data stat for stage %d-------" % stage)
-    d = load_by_stage(stage=stage)
-    d, top_cv = filter_top_cv(d, k)
-    genes = list(d.keys())
-    imgs = []
-    all_cv = []
-    for g in genes:
-        imgs.extend(d[g]['img'])
-        all_cv += d[g]['ann']
-    print("stage", stage, "genes", len(genes), "imgs", len(imgs))
-    count = Counter(all_cv)
-    print(count)
-    print("\n")
-
-
-def dataset_tvt_stat(s=2, k=10):
-    print("---dataset train/val/test stat stage:%d, k:%d---" % (s, k))
-    data_stat(stage=s, k=k)
-
-    val_index = 4
-    train = SIDataset(mode='train', stage=s, k=k, val_index=val_index)
-    val = SIDataset(mode='val', stage=s, k=k, val_index=val_index)
-    test = SIDataset(mode='test', stage=s, k=k, val_index=val_index)
-
-    d = train.db
-
-    def count_gene(genes):
-        gene_cv = []
-        img_cv = []
-        for g in genes:
-            gene_cv += d[g]['ann']
-            for img in d[g]['ann']:
-                img_cv += d[g]['ann']
-        gene_count = Counter(gene_cv)
-        img_count = Counter(img_cv)
-        return gene_count, img_count
-
-    train_gc, train_ic = count_gene(train.genes)
-    val_gc, val_ic = count_gene(val.genes)
-    test_gc, test_ic = count_gene(test.genes)
-
-    top_cv = train.top_cv
-
-    print("--------gene count---------")
-    for cv in top_cv:
-        print("cv:%s\n \t  train:%d, val:%d, test:%d" % (
-            cv, train_gc[cv], val_gc[cv], test_gc[cv]))
-
-    print('\n')
-    print("--------img count---------")
-    for cv in top_cv:
-        print("cv:%s\n \t train:%d, val:%d, test:%d" % (
-            cv, train_ic[cv], val_ic[cv], test_ic[cv]))
-
-
 def generate_pj_samples(d, genes, count=4):
     gene_imgs = []
     for gene in genes:
@@ -140,6 +84,67 @@ def aug():
         0.5, iaa.ContrastNormalization((0.8, 1.2)))
     trfm = iaa.Sequential([hf, vf, blur, contrast])
     return trfm
+
+
+def stratify_split(genes, labels):
+    '''skmultilearn needs X as nsampel x ndim inputs'''
+    inputs = np.expand_dims(genes, axis=-1)
+    from skmultilearn.model_selection import iterative_train_test_split
+    X, y, X_test, y_test = iterative_train_test_split(
+        inputs, labels, test_size=0.5)
+    X_train, y_train, X_val, y_val = iterative_train_test_split(
+        X, y, test_size=0.2)
+    return X_train.squeeze(), X_val.squeeze(), X_test.squeeze()
+
+
+class StratifySIDataset(Dataset):
+
+    def __init__(self, mode='train', stage=2, k=10):
+        super(StratifySIDataset, self).__init__()
+        self.mode = mode
+        self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
+        self.nclass = len(self.top_cv)
+        genes = np.array(list(sorted(self.db.keys())))
+
+        labels = [self._get_gene_label(g) for g in genes]
+        labels = np.stack(labels, axis=0)
+
+        train_genes, val_genes, test_genes = stratify_split(genes, labels)
+
+        if mode == 'train':
+            self.genes = train_genes
+            self.aug = aug()
+        elif mode == 'val':
+            self.genes = val_genes
+        else:
+            self.genes = test_genes
+
+        self.gene_imgs = [(gene, img) for gene in self.genes
+                          for img in self.db[gene]['img']]
+
+    def _get_gene_label(self, gene):
+        gene_anns = self.db[gene]['ann']
+        anns = np.zeros(self.nclass)
+        for ann in gene_anns:
+            anns[self.top_cv.index(ann)] = 1
+        return anns
+
+    def __len__(self):
+        return len(self.gene_imgs)
+
+    def __getitem__(self, idx):
+        gene, img = self.gene_imgs[idx]
+        imgpth = os.path.join('data/pic', img)
+        nimg = cv2.imread(imgpth, -1)
+        nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
+        nimg = nimg.transpose(2, 0, 1)
+
+        anns = self._get_gene_label(gene)
+
+        if self.mode == 'train':
+            nimg = self.aug.augment_image(nimg)
+
+        return gene, nimg, anns
 
 
 def split_train_val(l, val_index=4, kfold=5):
@@ -333,6 +338,4 @@ def fly_collate_fn(batch):
 
 
 if __name__ == "__main__":
-    # for s in list(range(1, 7)):
-    #     data_stat(s, k=20)
-    dataset_tvt_stat()
+    pass

@@ -19,6 +19,48 @@ import util
 import sinet
 
 
+def train_resnet_stratify_si(s=2, k=10):
+    train_dataset = dataset.StratifySIDataset(
+        mode='train', stage=s, k=k)
+    val_dataset = dataset.StratifySIDataset(
+        mode='val', stage=s, k=k)
+    test_dataset = dataset.StratifySIDataset(
+        mode='test', stage=s, k=k)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['batch'] = 64
+    # from loss import FECLoss
+    # cfg['criterion'] = FECLoss(alpha=192)
+    cfg['epochs'] = 1000
+    cfg['scheduler'] = True
+    cfg['decay'] = 0.01
+    cfg['lr'] = 0.0001
+    cfg['patience'] = 20
+    # cfg['model'] = 'resnet_si_k%d_val%d' % (k, val_index)
+    # cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d_val%d' % (
+    #     s, k, val_index)
+    cfg['model'] = 'smallnet_si_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d' % (s, k)
+    cfg['collate'] = default_collate
+    cfg['instance'] = _train_si
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    # model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    if os.path.exists(model_pth):
+        # print("load pretrained model", model_pth)
+        # model.load_state_dict(torch.load(model_pth))
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    run_train(model, cfg)
+
+
 def train_senet_si(s=2, k=10, val_index=4):
     train_dataset = dataset.SIDataset(
         mode='train', stage=s, k=k, val_index=val_index)
@@ -65,18 +107,18 @@ def train_resnet_si(s=2, k=10, val_index=4):
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
     cfg['batch'] = 64
-    # from loss import FECLoss
-    # cfg['criterion'] = FECLoss(alpha=64)
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=192)
     cfg['epochs'] = 1000
-    cfg['scheduler'] = True
+    cfg['scheduler'] = False
     cfg['decay'] = 0.01
-    cfg['lr'] = 0.0001
+    cfg['lr'] = 0.00001
     cfg['patience'] = 20
     # cfg['model'] = 'resnet_si_k%d_val%d' % (k, val_index)
     # cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d_val%d' % (
     #     s, k, val_index)
-    cfg['model'] = 'smallnet_si_k%d_val%d' % (k, val_index)
-    cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d_val%d' % (
+    cfg['model'] = 'smallnet_si_k%d_val%d_fec3' % (k, val_index)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d_val%d_fec3' % (
         s, k, val_index)
     cfg['collate'] = default_collate
     cfg['instance'] = _train_si
@@ -484,8 +526,9 @@ if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
     # train_prefv_naggn(s=6)
-    train_resnet_si(s=2, k=10, val_index=4)
+    # train_resnet_si(s=2, k=10, val_index=4)
     # train_resnet_pj(s=2)
     # sequence_train()
     # run_kfold_test()
     # train_senet_si(s=2, k=10, val_index=4)
+    train_resnet_stratify_si(s=2, k=10)
