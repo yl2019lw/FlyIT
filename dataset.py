@@ -88,6 +88,7 @@ def aug():
 
 def stratify_split(genes, labels):
     '''skmultilearn needs X as nsampel x ndim inputs'''
+    np.random.seed(286501567)
     inputs = np.expand_dims(genes, axis=-1)
     from skmultilearn.model_selection import iterative_train_test_split
     X, y, X_test, y_test = iterative_train_test_split(
@@ -145,6 +146,83 @@ class StratifySIDataset(Dataset):
             nimg = self.aug.augment_image(nimg)
 
         return gene, nimg, anns
+
+
+class StratifyPJDataset(Dataset):
+
+    def __init__(self, mode='train', stage=2, k=10):
+        super(StratifyPJDataset, self).__init__()
+        self.mode = mode
+        self.db, self.top_cv = filter_top_cv(load_by_stage(stage), k)
+        self.nclass = len(self.top_cv)
+        genes = np.array(list(sorted(self.db.keys())))
+
+        labels = [self._get_gene_label(g) for g in genes]
+        labels = np.stack(labels, axis=0)
+
+        train_genes, val_genes, test_genes = stratify_split(genes, labels)
+
+        if mode == 'train':
+            self.genes = train_genes
+            self.aug = aug()
+        elif mode == 'val':
+            self.genes = val_genes
+        else:
+            self.genes = test_genes
+
+        self.gene_imgs = generate_pj_samples(self.db, self.genes)
+
+    def _get_gene_label(self, gene):
+        gene_anns = self.db[gene]['ann']
+        anns = np.zeros(self.nclass)
+        for ann in gene_anns:
+            anns[self.top_cv.index(ann)] = 1
+        return anns
+
+    def __len__(self):
+        return len(self.gene_imgs)
+
+    def __getitem__(self, idx):
+        gene, imgs = self.gene_imgs[idx]
+
+        raw_nimgs = []
+        for img in imgs:
+            imgpth = os.path.join('data/pic', img)
+            nimg = cv2.imread(imgpth, -1)
+            nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
+            if self.mode == 'train':
+                nimg = self.aug.augment_image(nimg)
+            raw_nimgs.append(nimg.transpose(2, 0, 1))
+        raw_nimgs = np.stack(raw_nimgs, axis=0)
+
+        n, c, h, w = raw_nimgs.shape
+        pj_nimg = np.zeros((c, 2*h, 2*w), dtype=np.float)
+        if n == 4:
+            pj_nimg[:, 0:h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, 0:h, w:2*w] = raw_nimgs[1]
+            pj_nimg[:, h:2*h, 0:w] = raw_nimgs[2]
+            pj_nimg[:, h:2*h, w:2*w] = raw_nimgs[3]
+        elif n == 3:
+            pj_nimg[:, 0:h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, 0:h, w:2*w] = raw_nimgs[1]
+            pj_nimg[:, h:2*h, 0:w] = raw_nimgs[2]
+            pj_nimg[:, h:2*h, w:2*w] = raw_nimgs[0]
+        elif n == 2:
+            pj_nimg[:, 0:h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, 0:h, w:2*w] = raw_nimgs[1]
+            pj_nimg[:, h:2*h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, h:2*h, w:2*w] = raw_nimgs[1]
+        elif n == 1:
+            pj_nimg[:, 0:h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, 0:h, w:2*w] = raw_nimgs[0]
+            pj_nimg[:, h:2*h, 0:w] = raw_nimgs[0]
+            pj_nimg[:, h:2*h, w:2*w] = raw_nimgs[0]
+        else:
+            raise Exception("invalid img numbers in PJDataset:", n)
+
+        anns = self._get_gene_label(gene)
+
+        return gene, pj_nimg, anns
 
 
 def split_train_val(l, val_index=4, kfold=5):

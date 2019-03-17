@@ -19,6 +19,43 @@ import util
 import sinet
 
 
+def train_smallnet_stratify_pj(s=2, k=10):
+    train_dataset = dataset.StratifyPJDataset(
+        mode='train', stage=s, k=k)
+    val_dataset = dataset.StratifyPJDataset(
+        mode='val', stage=s, k=k)
+    test_dataset = dataset.StratifyPJDataset(
+        mode='test', stage=s, k=k)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['batch'] = 32
+    # from loss import FECLoss
+    # cfg['criterion'] = FECLoss(alpha=192)
+    cfg['epochs'] = 200
+    cfg['scheduler'] = True
+    cfg['decay'] = 0.01
+    cfg['lr'] = 0.0001
+    cfg['patience'] = 20
+
+    cfg['model'] = 'smallnet_pj_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d' % (s, k)
+    cfg['collate'] = default_collate
+    cfg['instance'] = _train_si
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    run_train(model, cfg)
+
+
 def train_resnet_stratify_si(s=2, k=10):
     train_dataset = dataset.StratifySIDataset(
         mode='train', stage=s, k=k)
@@ -34,22 +71,21 @@ def train_resnet_stratify_si(s=2, k=10):
     cfg['batch'] = 64
     # from loss import FECLoss
     # cfg['criterion'] = FECLoss(alpha=192)
-    cfg['epochs'] = 1000
+    cfg['epochs'] = 200
     cfg['scheduler'] = True
     cfg['decay'] = 0.01
     cfg['lr'] = 0.0001
     cfg['patience'] = 20
-    # cfg['model'] = 'resnet_si_k%d_val%d' % (k, val_index)
-    # cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d_val%d' % (
-    #     s, k, val_index)
-    cfg['model'] = 'smallnet_si_k%d' % (k)
-    cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d' % (s, k)
+    cfg['model'] = 'resnet_si_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_si_k%d' % (s, k)
+    # cfg['model'] = 'smallnet_si_k%d' % (k)
+    # cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d' % (s, k)
     cfg['collate'] = default_collate
     cfg['instance'] = _train_si
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    # model = nn.DataParallel(SiNet(nblock=4, k=k).cuda())
-    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
+    # model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
     if os.path.exists(model_pth):
         # print("load pretrained model", model_pth)
         # model.load_state_dict(torch.load(model_pth))
@@ -356,7 +392,7 @@ def run_train(model, cfg):
         for g in optimizer.param_groups:
             writer.add_scalar("lr", g['lr'], e)
 
-            if cfg['scheduler'] and g['lr'] > 1e-5:
+            if cfg['scheduler'] and g['lr'] > 1e-6:
                 scheduler.step(lab_f1_macro)
                 break
 
@@ -449,7 +485,20 @@ def run_test(model, cfg):
         df.to_csv(result, header=True, sep=',', index=False)
 
 
-def sequence_train():
+def sequence_train_stratify():
+    import multiprocessing as mp
+    for s in [2, 3, 4, 5, 6]:
+        p = mp.Process(target=train_smallnet_stratify_pj, args=(s, 10))
+        p.start()
+        p.join()
+
+    for s in [2, 3, 4, 5, 6]:
+        p = mp.Process(target=train_resnet_stratify_si, args=(s, 10))
+        p.start()
+        p.join()
+
+
+def sequence_train_kfold():
     import multiprocessing as mp
     for s in [6, 5, 4, 3, 2]:
         for val_index in [4, 3, 2, 1, 0]:
@@ -531,4 +580,6 @@ if __name__ == "__main__":
     # sequence_train()
     # run_kfold_test()
     # train_senet_si(s=2, k=10, val_index=4)
-    train_resnet_stratify_si(s=2, k=10)
+    # train_resnet_stratify_si(s=6, k=10)
+    # train_smallnet_stratify_pj(s=6, k=10)
+    sequence_train_stratify()
