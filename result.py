@@ -36,4 +36,5 @@ if __name__ == "__main__":
     # merge_result('resnet_pj')
     # merge_result("resnet_si")
     # merge_result('resnet_si_k20')
-    merge_result('resnet_si_k10_mean')
+    # merge_result('resnet_si_k10_mean')
+    merge_result('smallnet_si_k10')
