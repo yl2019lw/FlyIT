@@ -66,10 +66,12 @@ def filter_top_cv(d, k=10):
     return fd, top_cv
 
 
-def generate_pj_samples(d, genes, count=4):
+def generate_pj_samples(d, genes, shuffle=False, count=4):
     gene_imgs = []
     for gene in genes:
         ag_imgs = d[gene]['img']
+        if shuffle:
+            np.random.shuffle(ag_imgs)
         chunk_imgs = [ag_imgs[i:i+count]
                       for i in range(0, len(ag_imgs), count)]
         gene_imgs.extend([(gene, c) for c in chunk_imgs])
@@ -79,10 +81,12 @@ def generate_pj_samples(d, genes, count=4):
 def aug():
     hf = iaa.Fliplr(0.5)
     vf = iaa.Flipud(0.5)
-    blur = iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1)))
     contrast = iaa.Sometimes(
         0.5, iaa.ContrastNormalization((0.8, 1.2)))
-    trfm = iaa.Sequential([hf, vf, blur, contrast])
+    # color = iaa.Sometimes(
+    #     0.5, iaa.AddToHueAndSaturation((-10, 10), per_channel=True))
+    blur = iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1)))
+    trfm = iaa.Sequential([hf, vf, contrast, blur])
     return trfm
 
 
@@ -165,12 +169,14 @@ class StratifyPJDataset(Dataset):
         if mode == 'train':
             self.genes = train_genes
             self.aug = aug()
+            self.gene_imgs = generate_pj_samples(
+                self.db, self.genes, shuffle=True)
         elif mode == 'val':
             self.genes = val_genes
+            self.gene_imgs = generate_pj_samples(self.db, self.genes)
         else:
             self.genes = test_genes
-
-        self.gene_imgs = generate_pj_samples(self.db, self.genes)
+            self.gene_imgs = generate_pj_samples(self.db, self.genes)
 
     def _get_gene_label(self, gene):
         gene_anns = self.db[gene]['ann']
@@ -190,9 +196,10 @@ class StratifyPJDataset(Dataset):
             imgpth = os.path.join('data/pic', img)
             nimg = cv2.imread(imgpth, -1)
             nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
+            nimg = nimg.transpose(2, 0, 1)
             if self.mode == 'train':
                 nimg = self.aug.augment_image(nimg)
-            raw_nimgs.append(nimg.transpose(2, 0, 1))
+            raw_nimgs.append(nimg)
         raw_nimgs = np.stack(raw_nimgs, axis=0)
 
         n, c, h, w = raw_nimgs.shape
