@@ -13,10 +13,15 @@ from imgaug import augmenters as iaa
 
 def load_by_stage(stage=1):
     img = pd.read_csv('data/standard_images.csv')
-    img = img[img['stage'] == stage]
-
     ann = pd.read_csv('data/standard_annotations.csv')
-    ann = ann[ann['stage'] == stage]
+
+    if stage == -1:
+        # use all stage data
+        img = img[img['stage'] != 1]
+        ann = ann[ann['stage'] != 1]
+    else:
+        img = img[img['stage'] == stage]
+        ann = ann[ann['stage'] == stage]
 
     i_gene = img['gene'].unique()
     a_gene = ann['gene'].unique()
@@ -36,8 +41,8 @@ def load_by_stage(stage=1):
         for item in ann[ann['gene'] == g]['annotation'].values:
             gene_annotations += list(eval(item))
 
-        d[g]['img'] = gene_imgs
-        d[g]['ann'] = gene_annotations
+        d[g]['img'] = list(set(gene_imgs))
+        d[g]['ann'] = list(set(gene_annotations))
 
     return d
 
