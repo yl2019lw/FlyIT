@@ -8,6 +8,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+epsilon = 1e-8
+
 
 class FECLoss(nn.Module):
     '''auto weighted loss, focus on error correction'''
@@ -75,6 +77,60 @@ class FECLoss(nn.Module):
             return w_loss
         else:
             return torch.mean(w_loss)
+
+
+class F1Loss(nn.Module):
+    '''add f1 term to loss'''
+
+    def __init__(self, bce=False, factor=1.0, thr=0.5):
+        super(F1Loss, self).__init__()
+        self.bce = bce
+        self.factor = factor
+        self.thr = thr
+
+    def forward(self, p, y):
+        floss = self.compute_floss(p, y).float()
+        if self.bce:
+            oloss = F.binary_cross_entropy(p, y, reduction='elementwise_mean')
+            floss = oloss + floss * self.factor
+        return floss
+
+    def agree_mask(self, p, y):
+        '''return 0-1 agree mask, p > 0.5 for y = 1, p < 0.5 for y = 0'''
+        sign = (p - self.thr) * (y - self.thr)
+        return torch.sigmoid(1e8 * sign)
+
+    def mask_tp(self, p, y):
+        '''tp is y == 1 and p agree with y'''
+        return y * self.agree
+
+    def mask_fp(self, p, y):
+        '''fp is y == 0 and p not agree with y'''
+        return (1 - y) * (1 - self.agree)
+
+    def mask_tn(self, p, y):
+        '''tn is y == 0 and p agree with y'''
+        return (1 - y) * self.agree
+
+    def mask_fn(self, p, y):
+        '''fn is y == 1 and p not agree with y'''
+        return y * (1 - self.agree)
+
+    def compute_floss(self, p, y):
+        self.agree = self.agree_mask(p, y)
+
+        tp_ind = self.mask_tp(p, y)
+        fp_ind = self.mask_fp(p, y)
+        fn_ind = self.mask_fn(p, y)
+
+        tp = torch.sum(tp_ind, dim=0)
+        fp = torch.sum(fp_ind, dim=0)
+        fn = torch.sum(fn_ind, dim=0)
+
+        f1 = tp / (tp + 0.5 * fp + 0.5 * fn + epsilon)
+        ma_f1 = torch.mean(f1)
+
+        return 1 - ma_f1
 
 
 class FocalMSELoss(nn.Module):
