@@ -61,10 +61,17 @@ class AvgAggregator(nn.Module):
 
 class NAggN(nn.Module):
 
-    def __init__(self, k=10, agg='l1', nblock=4):
+    def __init__(self, k=10, agg='l1', nblock=4, feat='resnet'):
         super(NAggN, self).__init__()
-        self.fvextractor = extractor.Resnet(nblock)
-        fvdim = 512 // (2 ** (4 - nblock))
+        if feat == 'resnet':
+            self.fvextractor = extractor.Resnet(nblock)
+            fvdim = 512 // (2 ** (4 - nblock))
+        elif feat == 'small':
+            self.fvextractor = extractor.SmallFeat()
+            fvdim = 512
+        else:
+            raise Exception("Not Implemented")
+
         if agg == 'l1':
             self.aggregator = L1Aggregator(fvdim)
         elif agg == 'l2':
