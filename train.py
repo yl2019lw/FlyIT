@@ -19,6 +19,44 @@ import util
 import sinet
 
 
+def train_resnet_stratify_pj(s=2, k=10):
+    train_dataset = dataset.StratifyPJDataset(
+        mode='train', stage=s, k=k)
+    val_dataset = dataset.StratifyPJDataset(
+        mode='val', stage=s, k=k)
+    test_dataset = dataset.StratifyPJDataset(
+        mode='test', stage=s, k=k)
+
+    cfg = util.default_cfg()
+    cfg['train'] = train_dataset
+    cfg['val'] = val_dataset
+    cfg['test'] = test_dataset
+    cfg['batch'] = 32
+    # from loss import FECLoss
+    # cfg['criterion'] = FECLoss(alpha=192)
+    cfg['epochs'] = 500
+    cfg['scheduler'] = True
+    cfg['decay'] = 0.01
+    cfg['lr'] = 0.0001
+    cfg['patience'] = 30
+
+    cfg['model'] = 'resnet_pj_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/resnet_pj_k%d' % (s, k)
+    cfg['collate'] = default_collate
+    cfg['instance'] = _train_si
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    # model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    model = nn.DataParallel(sinet.SiNet(k=k).cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    run_train(model, cfg)
+
+
 def train_smallnet_stratify_pj(s=2, k=10):
     train_dataset = dataset.StratifyPJDataset(
         mode='train', stage=s, k=k)
@@ -34,11 +72,11 @@ def train_smallnet_stratify_pj(s=2, k=10):
     cfg['batch'] = 32
     # from loss import FECLoss
     # cfg['criterion'] = FECLoss(alpha=192)
-    cfg['epochs'] = 200
+    cfg['epochs'] = 500
     cfg['scheduler'] = True
     cfg['decay'] = 0.01
     cfg['lr'] = 0.0001
-    cfg['patience'] = 20
+    cfg['patience'] = 30
 
     cfg['model'] = 'smallnet_pj_k%d' % (k)
     cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d' % (s, k)
@@ -488,14 +526,14 @@ def run_test(model, cfg):
 def sequence_train_stratify():
     import multiprocessing as mp
     for s in [2, 3, 4, 5, 6]:
-        p = mp.Process(target=train_smallnet_stratify_pj, args=(s, 10))
+        p = mp.Process(target=train_resnet_stratify_pj, args=(s, 10))
         p.start()
         p.join()
 
-    for s in [2, 3, 4, 5, 6]:
-        p = mp.Process(target=train_resnet_stratify_si, args=(s, 10))
-        p.start()
-        p.join()
+    # for s in [2, 3, 4, 5, 6]:
+    #     p = mp.Process(target=train_resnet_stratify_si, args=(s, 10))
+    #     p.start()
+    #     p.join()
 
 
 def sequence_train_kfold():
@@ -581,5 +619,5 @@ if __name__ == "__main__":
     # run_kfold_test()
     # train_senet_si(s=2, k=10, val_index=4)
     # train_resnet_stratify_si(s=6, k=10)
-    # train_smallnet_stratify_pj(s=6, k=10)
+    # train_smallnet_stratify_pj(s=2, k=10)
     sequence_train_stratify()
