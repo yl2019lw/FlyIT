@@ -11,6 +11,39 @@ import torch.nn.functional as F
 epsilon = 1e-8
 
 
+class RectifyLoss(nn.Module):
+    '''RectifyLoss'''
+
+    def __init__(self, gamma=1, thr=0.5):
+        super(RectifyLoss, self).__init__()
+        self.gamma = gamma
+        self.thr = thr
+
+    def agree_mask(self, p, y):
+        '''return 0-1 agree mask, p > 0.5 for y = 1, p < 0.5 for y = 0'''
+        sign = (p - self.thr) * (y - self.thr)
+        return torch.sigmoid(1e8 * sign)
+
+    def mask_tp(self, p, y):
+        '''tp is y == 1 and p agree with y'''
+        return y * self.agree
+
+    def mask_fp(self, p, y):
+        '''fp is y == 0 and p not agree with y'''
+        return (1 - y) * (1 - self.agree)
+
+    def mask_tn(self, p, y):
+        '''tn is y == 0 and p agree with y'''
+        return (1 - y) * self.agree
+
+    def mask_fn(self, p, y):
+        '''fn is y == 1 and p not agree with y'''
+        return y * (1 - self.agree)
+
+    def forward(self, p, y):
+        pass
+
+
 class FECLoss(nn.Module):
     '''auto weighted loss, focus on error correction'''
     def __init__(self, alpha=100, gamma=1,

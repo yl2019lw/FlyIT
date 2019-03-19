@@ -21,6 +21,7 @@ def _config_stratify_pj_dataset(cfg, s, k):
         mode='val', stage=s, k=k)
     test_dataset = dataset.StratifyPJDataset(
         mode='test', stage=s, k=k)
+
     cfg['train'] = train_dataset
     cfg['val'] = val_dataset
     cfg['test'] = test_dataset
