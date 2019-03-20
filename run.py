@@ -20,9 +20,75 @@ def train_smallnet_stratify_pj(s=2, k=10):
     cfg = train._config_stratify_pj_dataset(cfg, s, k)
 
     model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
-    cfg['model'] = 'smallnet_pj_k%d' % (k)
-    cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d' % (s, k)
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=16)
+    cfg['model'] = 'smallnet_pj_k%d_fec0.5' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d_fec0.5' % (s, k)
     cfg = train._train_config_pj(model, cfg)
+    cfg['scheduler'] = False
+    cfg['lr'] = 0.0001
+    cfg['epochs'] = 500
+
+    train.run_train(model, cfg)
+
+
+def train_smallnet_stratify_pj_fech(s=2, k=10):
+    cfg = util.default_cfg()
+    cfg = train._config_stratify_pj_dataset(cfg, s, k)
+
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=16)
+    cfg['model'] = 'smallnet_pj_k%d_fec0.5' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d_fec0.5' % (s, k)
+    cfg = train._train_config_pj(model, cfg)
+    cfg['scheduler'] = False
+    cfg['lr'] = 0.0001
+    cfg['epochs'] = 1000
+
+    train.run_train(model, cfg)
+
+
+def train_smallnet_stratify_pj_fecq(s=2, k=10):
+    cfg = util.default_cfg()
+    cfg = train._config_stratify_pj_dataset(cfg, s, k)
+
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=8)
+    cfg['model'] = 'smallnet_pj_k%d_fec0.25' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_pj_k%d_fec0.25' % (s, k)
+    cfg = train._train_config_pj(model, cfg)
+    cfg['scheduler'] = False
+    cfg['lr'] = 0.0001
+    cfg['epochs'] = 1000
+
+    train.run_train(model, cfg)
+
+
+def train_smallnet_stratify_si(s=2, k=10):
+    cfg = util.default_cfg()
+    cfg = train._config_stratify_si_dataset(cfg, s, k)
+
+    model = nn.DataParallel(sinet.SmallNet(k=k).cuda())
+    cfg['model'] = 'smallnet_si_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d' % (s, k)
+    cfg = train._train_config_si(model, cfg)
+
+    train.run_train(model, cfg)
+
+
+def train_resnet_stratify_si(s=2, k=10):
+    cfg = util.default_cfg()
+    cfg = train._config_stratify_si_dataset(cfg, s, k)
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=48)
+
+    model = nn.DataParallel(sinet.SiNet(nblock=2, k=k).cuda())
+    cfg['model'] = 'resnet18b2_si_k%d_fec0.75' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/resnet18b2_si_k%d_fec0.75' % (s, k)
+    cfg = train._train_config_si(model, cfg)
+    cfg['scheduler'] = False
 
     train.run_train(model, cfg)
 
@@ -243,14 +309,14 @@ def run_kfold_test(k=10):
 def sequence_train_stratify():
     import multiprocessing as mp
     for s in [2, 3, 4, 5, 6]:
-        p = mp.Process(target=train_smallnet_stratify_pj, args=(s, 10))
+        p = mp.Process(target=train_smallnet_stratify_pj_fech, args=(s, 10))
         p.start()
         p.join()
 
-    # for s in [2, 3, 4, 5, 6]:
-    #     p = mp.Process(target=train_resnet_stratify_si, args=(s, 10))
-    #     p.start()
-    #     p.join()
+    for s in [2, 3, 4, 5, 6]:
+        p = mp.Process(target=train_smallnet_stratify_pj_fecq, args=(s, 10))
+        p.start()
+        p.join()
 
 
 def sequence_train_kfold():
@@ -261,6 +327,7 @@ def sequence_train_kfold():
             p.start()
             p.join()
 
+
 if __name__ == "__main__":
     # train_transformer(s=2)
     # train_naggn(s=2)
@@ -270,6 +337,8 @@ if __name__ == "__main__":
     # sequence_train()
     # run_kfold_test()
     # train_senet_si(s=2, k=10, val_index=4)
-    train_tinynet_stratify_si(s=2, k=10)
-    # train_smallnet_stratify_pj(s=6, k=10)
+    # train_tinynet_stratify_si(s=2, k=10)
+    # train_smallnet_stratify_pj(s=2, k=10)
     # sequence_train_stratify()
+    # train_smallnet_stratify_si(s=2, k=10)
+    train_resnet_stratify_si(s=2, k=10)

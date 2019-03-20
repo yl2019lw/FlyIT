@@ -185,7 +185,7 @@ def run_train(model, cfg):
         for g in optimizer.param_groups:
             writer.add_scalar("lr", g['lr'], e)
 
-            if cfg['scheduler'] and g['lr'] > 1e-6:
+            if cfg['scheduler'] and g['lr'] > 1e-5:
                 scheduler.step(lab_f1_macro)
                 break
 
