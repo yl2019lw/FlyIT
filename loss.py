@@ -44,6 +44,26 @@ class RectifyLoss(nn.Module):
         pass
 
 
+class SFocalLoss(nn.Module):
+    '''Simple Focal Loss without alpha t'''
+    def __init__(self, gamma=2, reduction="elementwise_mean"):
+        super(SFocalLoss, self).__init__()
+        self.gamma = gamma
+        self.reduction = reduction
+
+    def forward(self, p, y):
+        pt = y * p + (1 - y) * (1 - p)
+        pt = pt.clamp(epsilon, 1.0 - epsilon)
+
+        w = (1 - pt).pow(self.gamma)
+        w = w.clamp(epsilon, 10000.0)
+        loss = -w * pt.log() / 2
+        if self.reduction == 'none':
+            return loss
+        else:
+            return torch.mean(loss)
+
+
 class FECLoss(nn.Module):
     '''auto weighted loss, focus on error correction'''
     def __init__(self, alpha=100, gamma=1,

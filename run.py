@@ -69,12 +69,14 @@ def train_smallnet_stratify_pj_fecq(s=2, k=10):
 def train_resnet_stratify_si(s=2, k=10):
     cfg = util.default_cfg()
     cfg = train._config_stratify_si_dataset(cfg, s, k)
-    from loss import FECLoss
-    cfg['criterion'] = FECLoss(alpha=48)
+    # from loss import FECLoss
+    # cfg['criterion'] = FECLoss(alpha=48)
+    # from loss import SFocalLoss
+    # cfg['criterion'] = SFocalLoss(gamma=1)
 
     model = nn.DataParallel(sinet.SiNet(nblock=2, k=k).cuda())
-    cfg['model'] = 'resnet18b2_si_k%d_fec0.75' % (k)
-    cfg['model_dir'] = 'modeldir/stage%d/resnet18b2_si_k%d_fec0.75' % (s, k)
+    cfg['model'] = 'resnet18b2_si_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage%d/resnet18b2_si_k%d' % (s, k)
     cfg = train._train_config_si(model, cfg)
     cfg['scheduler'] = False
 
@@ -91,7 +93,7 @@ def train_smallnet_stratify_si(s=2, k=10):
     cfg['model'] = 'smallnet_si_k%d_fec1' % (k)
     cfg['model_dir'] = 'modeldir/stage%d/smallnet_si_k%d_fec1' % (s, k)
     cfg = train._train_config_si(model, cfg)
-    cfg['scheduler'] = False
+    cfg['scheduler'] = True
     cfg['lr'] = 0.0001
 
     train.run_train(model, cfg)
@@ -391,7 +393,7 @@ if __name__ == "__main__":
 
     # train_tinynet_stratify_si(s=2, k=10)
     # sequence_train_stratify()
-    train_resnet_stratify_si(s=2, k=10)
+    # train_resnet_stratify_si(s=2, k=10)
     # train_smallnet_stratify_pj(s=6, k=10)
-    # train_smallnet_stratify_si(s=2, k=10)
+    train_smallnet_stratify_si(s=2, k=10)
     # sequence_train_stratify_si()

@@ -154,6 +154,10 @@ class StratifySIDataset(Dataset):
         if self.mode == 'train':
             nimg = self.aug.augment_image(nimg)
 
+        mean = np.mean(nimg, axis=(1, 2), keepdims=True)
+        std = np.std(nimg, axis=(1, 2), keepdims=True)
+        nimg = (nimg - mean) / std
+
         return gene, nimg, anns
 
 
