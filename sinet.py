@@ -28,6 +28,32 @@ class SiNet(nn.Module):
         return torch.sigmoid(self.proj(fv))
 
 
+class Resnet34(nn.Module):
+
+    def __init__(self, nblock=4, k=10):
+        super(Resnet34, self).__init__()
+        self.fvextractor = extractor.Resnet(nblock, basic='resnet34')
+        fvdim = 512 // (2 ** (4 - nblock))
+        self.proj = nn.Linear(fvdim, k)
+
+    def forward(self, x):
+        fv = self.fvextractor(x)
+        return torch.sigmoid(self.proj(fv))
+
+
+class Resnet50(nn.Module):
+
+    def __init__(self, nblock=4, k=10):
+        super(Resnet50, self).__init__()
+        self.fvextractor = extractor.Resnet(nblock, basic='resnet50')
+        fvdim = 2048 // (2 ** (4 - nblock))
+        self.proj = nn.Linear(fvdim, k)
+
+    def forward(self, x):
+        fv = self.fvextractor(x)
+        return torch.sigmoid(self.proj(fv))
+
+
 class TinyNet(nn.Module):
 
     def __init__(self, k=10):
@@ -160,30 +186,6 @@ class VggNet(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.model.classifier(x)
         return torch.sigmoid(x)
-
-
-class Resnet50(nn.Module):
-
-    def __init__(self, k=10):
-        super(Resnet50, self).__init__()
-        self.model = torchvision.models.resnet50(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.model.fc = nn.Linear(2048, k)
-
-    def forward(self, x):
-        return torch.sigmoid(self.model(x))
-
-
-class Resnet101(nn.Module):
-
-    def __init__(self, k=10):
-        super(Resnet101, self).__init__()
-        self.model = torchvision.models.resnet101(pretrained=True)
-        self.model.avgpool = nn.AdaptiveAvgPool2d(1)
-        self.model.fc = nn.Linear(2048, k)
-
-    def forward(self, x):
-        return torch.sigmoid(self.model(x))
 
 
 class FlySENet(SENet):

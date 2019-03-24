@@ -114,8 +114,8 @@ def stat(k=10):
 def split_train_val_test(sids, labels):
     np.random.seed(286501567)
     np.random.shuffle(sids)
-    ts = len(sids) * 0.5
-    vs = len(sids) * 0.4
+    ts = int(len(sids) * 0.5)
+    vs = int(len(sids) * 0.4)
 
     return sids[:vs], sids[vs:ts], sids[ts:]
 
@@ -187,9 +187,9 @@ class SIDataset(Dataset):
 
         anns = self._get_sid_label(sid)
 
-        # mean = np.mean(nimg, axis=(1, 2), keepdims=True)
-        # std = np.std(nimg, axis=(1, 2), keepdims=True)
-        # nimg = (nimg - mean) / std
+        mean = np.mean(nimg, axis=(1, 2), keepdims=True)
+        std = np.std(nimg, axis=(1, 2), keepdims=True)
+        nimg = (nimg - mean) / std
 
         return sid, nimg, anns
 
@@ -236,8 +236,6 @@ class PJDataset(Dataset):
             nimg = cv2.imread(imgpth, -1)
             nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
             nimg = nimg.transpose(2, 0, 1)
-            if self.mode == 'train':
-                nimg = self.aug.augment_image(nimg)
             raw_nimgs.append(nimg)
         raw_nimgs = np.stack(raw_nimgs, axis=0)
 

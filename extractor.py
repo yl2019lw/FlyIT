@@ -8,9 +8,15 @@ import torch.nn as nn
 
 class ConvResnet(nn.Module):
 
-    def __init__(self, nblock=4):
+    def __init__(self, nblock=4, basic='resnet18'):
         super(ConvResnet, self).__init__()
-        origin = torchvision.models.resnet18(pretrained=True)
+        if basic == 'resnet18':
+            origin = torchvision.models.resnet18(pretrained=True)
+        elif basic == 'resnet34':
+            origin = torchvision.models.resnet34(pretrained=True)
+        elif basic == 'resnet50':
+            origin = torchvision.models.resnet50(pretrained=True)
+
         self.conv0 = nn.Conv2d(3, 64, kernel_size=7, stride=2,
                                padding=3, bias=False)
         self.conv0.weight = torch.nn.Parameter(origin.conv1.weight)
@@ -44,9 +50,9 @@ class ConvResnet(nn.Module):
 
 class Resnet(nn.Module):
 
-    def __init__(self, nblock=4):
+    def __init__(self, nblock=4, basic='resnet18'):
         super(Resnet, self).__init__()
-        self.features = ConvResnet(nblock)
+        self.features = ConvResnet(nblock, basic)
         self.pool = nn.AdaptiveAvgPool2d(1)
 
     def forward(self, x):
