@@ -4,6 +4,7 @@
 import torch
 import torch.nn as nn
 import torchvision
+import torch.nn.functional as F
 from torch.utils import model_zoo
 from pretrainedmodels.models.senet import SENet
 from pretrainedmodels.models.senet import SEResNetBottleneck
@@ -52,6 +53,25 @@ class Resnet50(nn.Module):
     def forward(self, x):
         fv = self.fvextractor(x)
         return torch.sigmoid(self.proj(fv))
+
+
+class Densenet121(nn.Module):
+
+    def __init__(self, k=10):
+        super(Densenet121, self).__init__()
+        origin = torchvision.models.densenet121(pretrained=True)
+        self.features = origin.features
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.classifier = nn.Linear(1024, k)
+
+    def forward(self, x):
+        features = self.features(x)
+        out = F.relu(features, inplace=True)
+        # out = F.avg_pool2d(
+        #     out, kernel_size=7, stride=1).view(features.size(0), -1)
+        out = self.avg_pool(out).view(features.size(0), -1)
+        out = self.classifier(out)
+        return torch.sigmoid(out)
 
 
 class TinyNet(nn.Module):
