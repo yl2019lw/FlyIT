@@ -210,12 +210,16 @@ class PJDataset(Dataset):
 
         if mode == 'train':
             self.sids = train_sids
+            self.sid_imgs = generate_pj_samples(self.db, self.sids,
+                                                shuffle=True)
+
         elif mode == 'val':
             self.sids = val_sids
+            self.sid_imgs = generate_pj_samples(self.db, self.sids)
+
         else:
             self.sids = test_sids
-
-        self.sid_imgs = generate_pj_samples(self.db, self.sids)
+            self.sid_imgs = generate_pj_samples(self.db, self.sids)
 
     def _get_sid_label(self, sid):
         sid_anns = self.db[sid]['ann']

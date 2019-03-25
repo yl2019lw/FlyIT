@@ -158,12 +158,12 @@ def train_senet_si(k=10):
 
 def train_resnet_pj(k=10):
     cfg = _allrun_config_pj(k)
-    # from loss import FECLoss
-    # cfg['criterion'] = FECLoss(alpha=48)
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=96)
 
     model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
-    cfg['model'] = 'resnet18b4_pj_k%d' % (k)
-    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_pj_k%d' % (k)
+    cfg['model'] = 'resnet18b4_pj_k%d_fec3' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_pj_k%d_fec3' % (k)
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     if os.path.exists(model_pth):
@@ -260,9 +260,9 @@ if __name__ == "__main__":
     # train_smallnet_si()
     # train_resnet34_si()
     # train_densenet121_si()
-    train_senet_si()
+    # train_senet_si()
 
-    # train_resnet_pj()
+    train_resnet_pj(k=20)
     # train_resnet34_pj()
     # train_resnet50_pj()
     # train_densenet121_pj()
