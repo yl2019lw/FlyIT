@@ -6,8 +6,6 @@ import psutil
 import npmetrics
 from sklearn import metrics
 
-NUM_CLASSES = 10
-
 
 def default_cfg():
     cfg = {}
@@ -65,7 +63,7 @@ def torch_metrics(gt, predict, writer, step, mode="val", score=None):
     sl_acc = npmetrics.single_label_accuracy(gt, predict)
     sl_precision = npmetrics.single_label_precision(gt, predict)
     sl_recall = npmetrics.single_label_recall(gt, predict)
-    for i in range(NUM_CLASSES):
+    for i in range(gt.shape[-1]):
         writer.add_scalar("%s sl_%d_acc" % (mode, i),
                           sl_acc[i], step)
         writer.add_scalar("%s sl_%d_precision" % (mode, i),

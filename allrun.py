@@ -13,7 +13,7 @@ import util
 import train
 
 
-def _allrun_config_si(cfg, k=10):
+def _allrun_config_si(k=10):
     cfg = util.default_cfg()
 
     train_dataset = alldataset.SIDataset(mode='train', k=k)
@@ -67,7 +67,7 @@ def train_resnet_si(k=10):
     model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
     cfg['model'] = 'resnet18b4_si_k%d' % (k)
     cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d' % (k)
-    cfg['lr'] = 0.00001
+    cfg['lr'] = 0.0001
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     if os.path.exists(model_pth):
@@ -198,10 +198,10 @@ def train_resnet50_pj(k=10):
 
 
 if __name__ == "__main__":
-    # train_resnet_si()
+    train_resnet_si(k=20)
     # train_smallnet_si()
     # train_resnet34_si()
-    train_densenet121_si()
+    # train_densenet121_si()
 
     # train_resnet_pj()
     # train_resnet34_pj()

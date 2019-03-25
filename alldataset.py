@@ -187,9 +187,9 @@ class SIDataset(Dataset):
 
         anns = self._get_sid_label(sid)
 
-        mean = np.mean(nimg, axis=(1, 2), keepdims=True)
-        std = np.std(nimg, axis=(1, 2), keepdims=True)
-        nimg = (nimg - mean) / std
+        # mean = np.mean(nimg, axis=(1, 2), keepdims=True)
+        # std = np.std(nimg, axis=(1, 2), keepdims=True)
+        # nimg = (nimg - mean) / std
 
         return sid, nimg, anns
 
