@@ -59,15 +59,38 @@ def _allrun_config_pj(k=10):
     return cfg
 
 
+def train_sequence_si():
+    ks = [10, 20]
+    fecs = [[1, 2, 3, 4], [1, 2, 3, 4]]
+    from loss import FECLoss
+    for i, k in enumerate(ks):
+        cfg = _allrun_config_si(k)
+        cfg['lr'] = 0.0001
+        cfg['epochs'] = 200
+        for fec in fecs[i]:
+            cfg['criterion'] = FECLoss(alpha=cfg['batch'] * fec)
+            model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
+            cfg['model'] = 'resnet18b4_si_k%d_fec%d' % (k, fec)
+            cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d_fec%d' % (k, fec)
+            model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+            if os.path.exists(model_pth):
+                ckp = torch.load(model_pth)
+                model.load_state_dict(ckp['model'])
+                cfg['step'] = ckp['epoch'] + 1
+                print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+            train.run_train(model, cfg)
+
+
 def train_resnet_si(k=10):
     cfg = _allrun_config_si(k)
-    # from loss import FECLoss
-    # cfg['criterion'] = FECLoss(alpha=48)
+    from loss import FECLoss
+    cfg['criterion'] = FECLoss(alpha=64)
 
     model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
-    cfg['model'] = 'resnet18b4_si_k%d' % (k)
-    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d' % (k)
-    cfg['lr'] = 0.00001
+    cfg['model'] = 'resnet18b4_si_k%d_fec1' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d_fec1' % (k)
+    cfg['lr'] = 0.0001
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     if os.path.exists(model_pth):
@@ -256,7 +279,8 @@ def train_senet_pj(k=10):
 
 
 if __name__ == "__main__":
-    # train_resnet_si(k=20)
+    train_sequence_si()
+    # train_resnet_si(k=30)
     # train_smallnet_si()
     # train_resnet34_si()
     # train_densenet121_si()
