@@ -67,7 +67,7 @@ def train_resnet_si(k=10):
     model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
     cfg['model'] = 'resnet18b4_si_k%d' % (k)
     cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d' % (k)
-    cfg['lr'] = 0.0001
+    cfg['lr'] = 0.00001
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     if os.path.exists(model_pth):
@@ -123,6 +123,26 @@ def train_densenet121_si(k=10):
     model = nn.DataParallel(sinet.Densenet121(k=k).cuda())
     cfg['model'] = 'densenet121_si_k%d' % (k)
     cfg['model_dir'] = 'modeldir/stage_all/densenet121_si_k%d' % (k)
+    cfg['lr'] = 0.0001
+    cfg['scheduler'] = True
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    train.run_train(model, cfg)
+
+
+def train_senet_si(k=10):
+    cfg = _allrun_config_si(k)
+
+    model = nn.DataParallel(sinet.FlySENet(k=k).cuda())
+    cfg['model'] = 'senet_si_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/senet_si_k%d' % (k)
+    cfg['batch'] = 32
     cfg['lr'] = 0.0001
     cfg['scheduler'] = True
 
@@ -197,12 +217,52 @@ def train_resnet50_pj(k=10):
     train.run_train(model, cfg)
 
 
+def train_densenet121_pj(k=10):
+    cfg = _allrun_config_pj(k)
+
+    model = nn.DataParallel(sinet.Densenet121(k=k).cuda())
+    cfg['model'] = 'densenet121_pj_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/densenet121_pj_k%d' % (k)
+    cfg['lr'] = 0.0001
+    cfg['scheduler'] = True
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    train.run_train(model, cfg)
+
+
+def train_senet_pj(k=10):
+    cfg = _allrun_config_pj(k)
+
+    model = nn.DataParallel(sinet.FlySENet(k=k).cuda())
+    cfg['model'] = 'senet_pj_k%d' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/senet_pj_k%d' % (k)
+    cfg['lr'] = 0.0001
+    cfg['scheduler'] = True
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    train.run_train(model, cfg)
+
+
 if __name__ == "__main__":
-    train_resnet_si(k=20)
+    # train_resnet_si(k=20)
     # train_smallnet_si()
     # train_resnet34_si()
     # train_densenet121_si()
+    train_senet_si()
 
     # train_resnet_pj()
     # train_resnet34_pj()
     # train_resnet50_pj()
+    # train_densenet121_pj()
