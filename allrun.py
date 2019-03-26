@@ -68,15 +68,17 @@ def train_sequence_si():
     from loss import FECLoss
 
     for i, k in enumerate(ks):
-        cfg = _allrun_config_si(k)
-        cfg['lr'] = 0.00001
-        cfg['batch'] = 64
-        cfg['epochs'] = 250
-        cfg['scheduler'] = True
-        cfg['patience'] = 30
-        cfg['step'] = 0
-
         for fec in fecs[i]:
+            cfg = _allrun_config_si(k)
+            cfg['lr'] = 0.00001
+            cfg['batch'] = 64
+            cfg['epochs'] = 200
+            cfg['scheduler'] = True
+            cfg['patience'] = 30
+            cfg['step'] = 0
+
+            if fec % 2 == 1:
+                continue
             if fec == 0:
                 cfg['criterion'] = torch.nn.BCELoss()
                 cfg['model'] = 'resnet18b4_si_k%d' % (k)
@@ -196,15 +198,15 @@ def train_sequence_pj():
     from loss import FECLoss
 
     for i, k in enumerate(ks):
-        cfg = _allrun_config_pj(k)
-        cfg['lr'] = 0.00001
-        cfg['batch'] = 32
-        cfg['epochs'] = 250
-        cfg['scheduler'] = True
-        cfg['patience'] = 30
-        cfg['step'] = 0
-
         for fec in fecs[i]:
+            cfg = _allrun_config_pj(k)
+            cfg['lr'] = 0.00001
+            cfg['batch'] = 32
+            cfg['epochs'] = 250
+            cfg['scheduler'] = True
+            cfg['patience'] = 30
+            cfg['step'] = 0
+
             if fec == 0:
                 cfg['criterion'] = torch.nn.BCELoss()
                 cfg['model'] = 'resnet18b4_pj_k%d' % (k)
@@ -320,14 +322,14 @@ def train_senet_pj(k=10):
 
 
 if __name__ == "__main__":
-    # train_sequence_si()
+    train_sequence_si()
     # train_resnet_si(k=30)
     # train_smallnet_si()
     # train_resnet34_si()
     # train_densenet121_si()
     # train_senet_si()
 
-    train_sequence_pj()
+    # train_sequence_pj()
     # train_resnet_pj(k=20)
     # train_resnet34_pj()
     # train_resnet50_pj()
