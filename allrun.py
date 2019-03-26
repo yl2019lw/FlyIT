@@ -60,25 +60,33 @@ def _allrun_config_pj(k=10):
 
 
 def train_sequence_si():
-    ks = [10, 20]
-    fecs = [[1, 2, 3, 4], [1, 2, 3, 4]]
+    ks = [10, 20, 30]
+    fecs = [[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]]
+
+    logdir = 'modeldir/stage_all/seq_si/'
+
     from loss import FECLoss
+
     for i, k in enumerate(ks):
         cfg = _allrun_config_si(k)
-        cfg['lr'] = 0.0001
-        cfg['epochs'] = 200
-        for fec in fecs[i]:
-            cfg['criterion'] = FECLoss(alpha=cfg['batch'] * fec)
-            model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
-            cfg['model'] = 'resnet18b4_si_k%d_fec%d' % (k, fec)
-            cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_si_k%d_fec%d' % (k, fec)
-            model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-            if os.path.exists(model_pth):
-                ckp = torch.load(model_pth)
-                model.load_state_dict(ckp['model'])
-                cfg['step'] = ckp['epoch'] + 1
-                print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+        cfg['lr'] = 0.00001
+        cfg['batch'] = 64
+        cfg['epochs'] = 250
+        cfg['scheduler'] = True
+        cfg['patience'] = 30
+        cfg['step'] = 0
 
+        for fec in fecs[i]:
+            if fec == 0:
+                cfg['criterion'] = torch.nn.BCELoss()
+                cfg['model'] = 'resnet18b4_si_k%d' % (k)
+            else:
+                cfg['criterion'] = FECLoss(alpha=cfg['batch'] * fec)
+                cfg['model'] = 'resnet18b4_si_k%d_fec%d' % (k, fec)
+
+            cfg['model_dir'] = '%s/%s' % (logdir, cfg['model'])
+
+            model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
             train.run_train(model, cfg)
 
 
@@ -179,14 +187,47 @@ def train_senet_si(k=10):
     train.run_train(model, cfg)
 
 
+def train_sequence_pj():
+    ks = [10, 20, 30]
+    fecs = [[0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5], [0, 1, 2, 3, 4, 5]]
+
+    logdir = 'modeldir/stage_all/seq_pj/'
+
+    from loss import FECLoss
+
+    for i, k in enumerate(ks):
+        cfg = _allrun_config_pj(k)
+        cfg['lr'] = 0.00001
+        cfg['batch'] = 32
+        cfg['epochs'] = 250
+        cfg['scheduler'] = True
+        cfg['patience'] = 30
+        cfg['step'] = 0
+
+        for fec in fecs[i]:
+            if fec == 0:
+                cfg['criterion'] = torch.nn.BCELoss()
+                cfg['model'] = 'resnet18b4_pj_k%d' % (k)
+            else:
+                cfg['criterion'] = FECLoss(alpha=cfg['batch'] * fec)
+                cfg['model'] = 'resnet18b4_pj_k%d_fec%d' % (k, fec)
+
+            cfg['model_dir'] = '%s/%s' % (logdir, cfg['model'])
+
+            model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
+            train.run_train(model, cfg)
+
+
 def train_resnet_pj(k=10):
     cfg = _allrun_config_pj(k)
     from loss import FECLoss
-    cfg['criterion'] = FECLoss(alpha=96)
+    cfg['criterion'] = FECLoss(alpha=128)
+    cfg['lr'] = 0.0001
+    cfg['epochs'] = 200
 
     model = nn.DataParallel(sinet.SiNet(nblock=4, k=k).cuda())
-    cfg['model'] = 'resnet18b4_pj_k%d_fec3' % (k)
-    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_pj_k%d_fec3' % (k)
+    cfg['model'] = 'resnet18b4_pj_k%d_fec4' % (k)
+    cfg['model_dir'] = 'modeldir/stage_all/resnet18b4_pj_k%d_fec4' % (k)
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     if os.path.exists(model_pth):
@@ -279,14 +320,15 @@ def train_senet_pj(k=10):
 
 
 if __name__ == "__main__":
-    train_sequence_si()
+    # train_sequence_si()
     # train_resnet_si(k=30)
     # train_smallnet_si()
     # train_resnet34_si()
     # train_densenet121_si()
     # train_senet_si()
 
-    train_resnet_pj(k=20)
+    train_sequence_pj()
+    # train_resnet_pj(k=20)
     # train_resnet34_pj()
     # train_resnet50_pj()
     # train_densenet121_pj()
