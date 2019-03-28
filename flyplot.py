@@ -6,8 +6,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 
-def merge_csv(mlist=[], outfile="out.csv"):
-    basedir = 'modeldir/stage_all'
+def merge_csv(mlist=[], outfile="out.csv", basedir='modeldir/stage_all'):
     inlist = ['%s/%s/metrics.csv' % (basedir, x) for x in mlist]
     d = {}
     d['loss'] = mlist
@@ -65,10 +64,15 @@ def plot_loss(infile='loss.csv', outfile='loss.eps'):
 
 
 def test():
-    mlist = ['resnet18b4_pj_k10' + x
-             for x in ['', '_fec1', '_fec2', '_fec3', '_fec4']]
-    merge_csv(mlist, "out.csv")
-    plot_loss("out.csv", "out.eps")
+    methods = ['resnet18b4_pj_k10', 'resnet18b4_pj_k20', 'resnet18b4_pj_k30']
+    for m in methods:
+        mlist = [m + x
+                 for x in ['', '_fec1', '_fec2', '_fec3', '_fec4']]
+        merge_csv(mlist, "result/stage_all/%s.csv" % m,
+                  basedir='modeldir/stage_all/')
+
+        merge_csv(mlist, "result/stage_all/seq_pj/%s.csv" % m,
+                  basedir='modeldir/stage_all/seq_pj/')
 
 
 if __name__ == "__main__":
