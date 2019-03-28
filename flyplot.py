@@ -88,6 +88,7 @@ def merge_si():
         merge_csv(mlist, "result/stage_all/seq_si/%s.csv" % m,
                   basedir='modeldir/stage_all/seq_si/')
 
+
 if __name__ == "__main__":
     # test()
     # plot_loss('result/stage_all/seq_pj/resnet18b4_pj_k20.csv',
@@ -102,4 +103,12 @@ if __name__ == "__main__":
     # plot_loss('result/stage_all/resnet18b4_pj_k30.csv',
     #           'resnet18b4_pj_k30.eps')
 
-    merge_si()
+    # merge_si()
+    plot_loss('result/stage_all/resnet18b4_si_k10.csv',
+              'resnet18b4_si_k10.eps')
+
+    plot_loss('result/stage_all/resnet18b4_si_k20.csv',
+              'resnet18b4_si_k20.eps')
+
+    plot_loss('result/stage_all/resnet18b4_si_k30.csv',
+              'resnet18b4_si_k30.eps')
