@@ -111,6 +111,40 @@ def stat(k=10):
     print("sids", len(sids), "imgs", len(imgs))
 
 
+def all_k_stat():
+    for k in [10, 20, 30]:
+        print("------all k stat---------", k)
+        d = load_all_data()
+        filter_d, top_cv = filter_top_cv(d, k)
+
+        sids = sorted(filter_d.keys())
+        np.random.seed(286501567)
+        np.random.shuffle(sids)
+        ts = int(len(sids) * 0.5)
+        vs = int(len(sids) * 0.4)
+
+        train_sids = sids[:vs]
+        val_sids = sids[vs:ts]
+        test_sids = sids[ts:]
+        train_imgs = []
+        val_imgs = []
+        test_imgs = []
+
+        for sid in train_sids:
+            train_imgs.extend(d[sid]['img'])
+
+        for sid in val_sids:
+            val_imgs.extend(d[sid]['img'])
+
+        for sid in test_sids:
+            test_imgs.extend(d[sid]['img'])
+
+        print("train sids:", len(train_sids), "train imgs:", len(train_imgs))
+        print("val sids:", len(val_sids), "train imgs:", len(val_imgs))
+        print("test sids:", len(test_sids), "train imgs:", len(test_imgs))
+        print("\n")
+
+
 def split_train_val_test(sids, labels):
     np.random.seed(286501567)
     np.random.shuffle(sids)
@@ -274,4 +308,5 @@ class PJDataset(Dataset):
 
 
 if __name__ == "__main__":
-    stat(k=30)
+    # stat(k=30)
+    all_k_stat()
