@@ -1,0 +1,76 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+
+
+def merge_csv(mlist=[], outfile="out.csv"):
+    basedir = 'modeldir/stage_all'
+    inlist = ['%s/%s/metrics.csv' % (basedir, x) for x in mlist]
+    d = {}
+    d['loss'] = mlist
+    for path in inlist:
+        with open(path, 'r') as f:
+            for line in f.readlines():
+                key, value = line.strip("\n").split(":")
+                if key not in d:
+                    d[key] = []
+                d[key].append(value)
+
+    df = pd.DataFrame(d).set_index('loss')
+    df.to_csv(outfile)
+
+
+def plot_loss(infile='loss.csv', outfile='loss.eps'):
+    df = pd.read_csv(infile).set_index('loss')
+    methods = np.array(df.index)
+    metrics = np.array(df.columns)
+
+    fig, ax = plt.subplots(figsize=(20, 5))
+    bar_width = 0.13
+    opacity = 0.8
+    # colors = ['b', 'g', 'r', 'c', 'm', 'k']
+    colors = ['#3399CC', '#33CC99', '#660066', '#996633', '#CC3366', '#CCFF66']
+
+    pos = np.arange(len(metrics))
+    for i, m in enumerate(methods):
+        plt.bar(pos + i*bar_width, df.loc[m], bar_width,
+                alpha=opacity,  color=colors[i],
+                label=m)
+
+    legend_labels = [
+        r'$BCE$', r'$Fec(\gamma=1)$',
+        r'$Fec(\gamma=2)$', r'$Fec(\gamma=3)$',
+        r'$Fec(\gamma=4)$']
+    metrics_labels = [
+        'auc', 'f1_macro', 'f1_micro',
+        'sensitivity', 'specificity']
+
+    plt.xticks(pos+0.4, metrics_labels)
+    ax.tick_params(axis='x', length=0, pad=8)
+
+    ax.set_xlim(left=-0.2, right=9.0)
+    ax.set_ylim(bottom=0.0, top=1.15)
+    leg = plt.legend(labels=legend_labels, loc='best', ncol=6,
+                     mode='expand', shadow=True, fancybox=True)
+    leg.get_frame().set_alpha(0.4)
+    plt.tight_layout()
+    # plt.legend(labels=legend_labels, title=r'Different Losses',
+    #            loc='upper left', bbox_to_anchor=(1, 1))
+    # plt.tight_layout(rect=[0, 0, 0.85, 1.0])
+    # plt.show()
+    plt.savefig(outfile)
+
+
+def test():
+    mlist = ['resnet18b4_pj_k10' + x
+             for x in ['', '_fec1', '_fec2', '_fec3', '_fec4']]
+    merge_csv(mlist, "out.csv")
+    plot_loss("out.csv", "out.eps")
+
+
+if __name__ == "__main__":
+    test()
+    # plot_loss()
