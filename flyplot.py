@@ -25,34 +25,36 @@ def merge_csv(mlist=[], outfile="out.csv", basedir='modeldir/stage_all'):
 def plot_loss(infile='loss.csv', outfile='loss.eps'):
     df = pd.read_csv(infile).set_index('loss')
     methods = np.array(df.index)
-    metrics = np.array(df.columns)
+    # metrics = np.array(df.columns)
 
-    fig, ax = plt.subplots(figsize=(20, 5))
-    bar_width = 0.13
+    fig, ax = plt.subplots(figsize=(7.5, 5))
+    bar_width = 0.2
     opacity = 0.8
     # colors = ['b', 'g', 'r', 'c', 'm', 'k']
     colors = ['#3399CC', '#33CC99', '#660066', '#996633', '#CC3366', '#CCFF66']
 
-    pos = np.arange(len(metrics))
+    # pos = np.arange(len(metrics))
+    pos = np.array([0.4, 2.0, 3.6, 5.2, 6.8])
     for i, m in enumerate(methods):
         plt.bar(pos + i*bar_width, df.loc[m], bar_width,
                 alpha=opacity,  color=colors[i],
                 label=m)
 
     legend_labels = [
-        r'$BCE$', r'$Fec(\gamma=1)$',
-        r'$Fec(\gamma=2)$', r'$Fec(\gamma=3)$',
-        r'$Fec(\gamma=4)$']
+        r'$BCE$', r'$FEC(\alpha=1)$',
+        r'$FEC(\alpha=2)$', r'$FEC(\alpha=3)$',
+        r'$FEC(\alpha=4)$']
     metrics_labels = [
         'auc', 'f1_macro', 'f1_micro',
         'sensitivity', 'specificity']
 
+    # plt.title("test")
     plt.xticks(pos+0.4, metrics_labels)
     ax.tick_params(axis='x', length=0, pad=8)
 
     ax.set_xlim(left=-0.2, right=9.0)
     ax.set_ylim(bottom=0.0, top=1.15)
-    leg = plt.legend(labels=legend_labels, loc='best', ncol=6,
+    leg = plt.legend(labels=legend_labels, loc='best', ncol=5,
                      mode='expand', shadow=True, fancybox=True)
     leg.get_frame().set_alpha(0.4)
     plt.tight_layout()
@@ -76,5 +78,14 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
-    # plot_loss()
+    # test()
+    plot_loss('result/stage_all/resnet18b4_pj_k10.csv',
+              'resnet18b4_pj_k10.eps')
+
+    plot_loss('result/stage_all/resnet18b4_pj_k20.csv',
+              'resnet18b4_pj_k20.eps')
+
+    plot_loss('result/stage_all/resnet18b4_pj_k30.csv',
+              'resnet18b4_pj_k30.eps')
+    # plot_loss('result/stage_all/seq_pj/resnet18b4_pj_k20.csv',
+    #           'resnet18b4_seq_pj_k20.eps')
