@@ -65,7 +65,7 @@ def plot_loss(infile='loss.csv', outfile='loss.eps'):
     plt.savefig(outfile)
 
 
-def test():
+def merge_pj():
     methods = ['resnet18b4_pj_k10', 'resnet18b4_pj_k20', 'resnet18b4_pj_k30']
     for m in methods:
         mlist = [m + x
@@ -77,15 +77,29 @@ def test():
                   basedir='modeldir/stage_all/seq_pj/')
 
 
+def merge_si():
+    methods = ['resnet18b4_si_k10', 'resnet18b4_si_k20', 'resnet18b4_si_k30']
+    for m in methods:
+        mlist = [m + x
+                 for x in ['', '_fec1', '_fec2', '_fec3', '_fec4']]
+        merge_csv(mlist, "result/stage_all/%s.csv" % m,
+                  basedir='modeldir/stage_all/')
+
+        merge_csv(mlist, "result/stage_all/seq_si/%s.csv" % m,
+                  basedir='modeldir/stage_all/seq_si/')
+
 if __name__ == "__main__":
     # test()
-    plot_loss('result/stage_all/resnet18b4_pj_k10.csv',
-              'resnet18b4_pj_k10.eps')
-
-    plot_loss('result/stage_all/resnet18b4_pj_k20.csv',
-              'resnet18b4_pj_k20.eps')
-
-    plot_loss('result/stage_all/resnet18b4_pj_k30.csv',
-              'resnet18b4_pj_k30.eps')
     # plot_loss('result/stage_all/seq_pj/resnet18b4_pj_k20.csv',
     #           'resnet18b4_seq_pj_k20.eps')
+
+    # plot_loss('result/stage_all/resnet18b4_pj_k10.csv',
+    #           'resnet18b4_pj_k10.eps')
+
+    # plot_loss('result/stage_all/resnet18b4_pj_k20.csv',
+    #           'resnet18b4_pj_k20.eps')
+
+    # plot_loss('result/stage_all/resnet18b4_pj_k30.csv',
+    #           'resnet18b4_pj_k30.eps')
+
+    merge_si()
