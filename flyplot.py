@@ -89,6 +89,82 @@ def merge_si():
                   basedir='modeldir/stage_all/seq_si/')
 
 
+def plot_all_in_one():
+
+    csvfile = 'result/stage_all/all.csv'
+    df = pd.read_csv(csvfile)
+    grouped = df.groupby(['method'])
+
+    methods = ['bce', 'fec1', 'fec2', 'fec3', 'fec4']
+    methods_display = [
+        r'$BCE$', r'$FEC(\alpha=1)$',
+        r'$FEC(\alpha=2)$', r'$FEC(\alpha=3)$',
+        r'$FEC(\alpha=4)$']
+
+    colors = ['b', 'c', 'g', 'y', 'r']
+    metrics = ['auc', 'f1_macro', 'f1_micro', 'sensitivity', 'specificity']
+    metrics_display = ['auc', 'f1_macro', 'f1_micro',
+                       'sensitivity', 'specificity']
+
+    yranges = [[0.85, 0.95], [0.45, 0.7], [0.5, 0.7],
+               [0.4, 0.7], [0.9, 1.0]]
+    # x_ticks = np.arange(3)
+    x_ticks = np.array([0.2, 1.4, 2.6])
+
+    def subplot(metric, sub_idx, handles, ylim):
+        # width = 0.15
+        width = 0.2
+        ax = plt.subplot(1, 5, sub_idx)
+        for idx, (mtd, color) in enumerate(zip(methods, colors)):
+            data = grouped.get_group(mtd)[metric]
+
+            handle = ax.bar(x_ticks + (width * idx), data, width,
+                            zorder=3, edgecolor='k')
+            handles.append(handle)
+
+            ax.set_ylim(ylim)
+
+            # ax.set_title(metrics_display[sub_idx - 1], y=1.03)
+            ax.set_title(metrics_display[sub_idx - 1], y=1.0)
+            ax.set_xticks(x_ticks + width * (len(methods) - 1) / 2)
+            ax.set_xticklabels(['D1', 'D2', 'D3'])
+
+            ax.tick_params(labelcolor='k', color='k')
+            for spine in ax.spines.values():
+                spine.set_edgecolor('k')
+
+            ax.set_facecolor('w')
+            # ax.grid(True, axis='y', color='k', alpha=0.3, zorder=0)
+
+    plt.style.use('ggplot')
+
+    for idx, (metric, ylim) in enumerate(zip(metrics, yranges)):
+        handles = []
+        subplot(metric, idx + 1, handles, ylim)
+
+    legend = plt.figlegend(handles, methods_display,
+                           loc=(0.0, 0.9),
+                           fontsize=10,
+                           ncol=5, mode='expand',
+                           shadow=True, fancybox=True)
+    # legend = plt.figlegend(handles, methods_display,
+    #                        loc=(0.85, 0.6),
+    #                        fontsize=10,
+    #                        shadow=True, fancybox=True)
+
+    legend.get_frame().set_facecolor('w')
+    legend.get_frame().set_edgecolor('k')
+
+    plt.subplots_adjust(top=0.8, wspace=0.3)
+    # plt.subplots_adjust(hspace=0.4)
+    # plt.gcf().set_size_inches(15, 6)
+    plt.gcf().set_size_inches(24, 4)
+    plt.tight_layout()
+
+    plt.savefig('comparison.eps', bbox_inches='tight')
+    plt.show()
+
+
 if __name__ == "__main__":
     # test()
     # plot_loss('result/stage_all/seq_pj/resnet18b4_pj_k20.csv',
@@ -104,11 +180,12 @@ if __name__ == "__main__":
     #           'resnet18b4_pj_k30.eps')
 
     # merge_si()
-    plot_loss('result/stage_all/resnet18b4_si_k10.csv',
-              'resnet18b4_si_k10.eps')
+    # plot_loss('result/stage_all/resnet18b4_si_k10.csv',
+    #           'resnet18b4_si_k10.eps')
 
-    plot_loss('result/stage_all/resnet18b4_si_k20.csv',
-              'resnet18b4_si_k20.eps')
+    # plot_loss('result/stage_all/resnet18b4_si_k20.csv',
+    #           'resnet18b4_si_k20.eps')
 
-    plot_loss('result/stage_all/resnet18b4_si_k30.csv',
-              'resnet18b4_si_k30.eps')
+    # plot_loss('result/stage_all/resnet18b4_si_k30.csv',
+    #           'resnet18b4_si_k30.eps')
+    plot_all_in_one()
