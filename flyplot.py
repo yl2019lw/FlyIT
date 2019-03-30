@@ -89,9 +89,7 @@ def merge_si():
                   basedir='modeldir/stage_all/seq_si/')
 
 
-def plot_all_in_one():
-
-    csvfile = 'result/stage_all/all.csv'
+def plot_all_in_one(csvfile='result/stage_all/all.csv', outfig='result.eps'):
     df = pd.read_csv(csvfile)
     grouped = df.groupby(['method'])
 
@@ -106,8 +104,10 @@ def plot_all_in_one():
     metrics_display = ['auc', 'f1_macro', 'f1_micro',
                        'sensitivity', 'specificity']
 
-    yranges = [[0.85, 0.95], [0.45, 0.7], [0.5, 0.7],
-               [0.4, 0.7], [0.9, 1.0]]
+    # yranges = [[0.85, 0.95], [0.45, 0.7], [0.5, 0.7],
+    #            [0.4, 0.7], [0.9, 1.0]]
+    yranges = [[0.9, 1.0], [0.5, 0.8], [0.5, 0.8],
+               [0.4, 0.8], [0.9, 1.0]]
     # x_ticks = np.arange(3)
     x_ticks = np.array([0.2, 1.4, 2.6])
 
@@ -119,13 +119,13 @@ def plot_all_in_one():
             data = grouped.get_group(mtd)[metric]
 
             handle = ax.bar(x_ticks + (width * idx), data, width,
-                            zorder=3, edgecolor='k')
+                            zorder=3, edgecolor='none')
             handles.append(handle)
 
             ax.set_ylim(ylim)
 
-            # ax.set_title(metrics_display[sub_idx - 1], y=1.03)
-            ax.set_title(metrics_display[sub_idx - 1], y=1.0)
+            ax.set_title(metrics_display[sub_idx - 1], y=1.03)
+            # ax.set_title(metrics_display[sub_idx - 1], y=1.0)
             ax.set_xticks(x_ticks + width * (len(methods) - 1) / 2)
             ax.set_xticklabels(['D1', 'D2', 'D3'])
 
@@ -143,10 +143,14 @@ def plot_all_in_one():
         subplot(metric, idx + 1, handles, ylim)
 
     legend = plt.figlegend(handles, methods_display,
-                           loc=(0.0, 0.9),
+                           # loc=(0.0, 0.9),
+                           loc='lower center',
+                           bbox_to_anchor=(0, 1.01, 1, 1),
+                           bbox_transform=plt.gcf().transFigure,
                            fontsize=10,
                            ncol=5, mode='expand',
-                           shadow=True, fancybox=True)
+                           shadow=True, fancybox=True,
+                           borderaxespad=0.1)
     # legend = plt.figlegend(handles, methods_display,
     #                        loc=(0.85, 0.6),
     #                        fontsize=10,
@@ -161,12 +165,11 @@ def plot_all_in_one():
     plt.gcf().set_size_inches(24, 4)
     plt.tight_layout()
 
-    plt.savefig('comparison.eps', bbox_inches='tight')
-    plt.show()
+    plt.savefig(outfig, bbox_inches='tight')
+    # plt.show()
 
 
-if __name__ == "__main__":
-    # test()
+def test():
     # plot_loss('result/stage_all/seq_pj/resnet18b4_pj_k20.csv',
     #           'resnet18b4_seq_pj_k20.eps')
 
@@ -178,14 +181,23 @@ if __name__ == "__main__":
 
     # plot_loss('result/stage_all/resnet18b4_pj_k30.csv',
     #           'resnet18b4_pj_k30.eps')
+    merge_si()
+    plot_loss('result/stage_all/resnet18b4_si_k10.csv',
+              'resnet18b4_si_k10.eps')
 
-    # merge_si()
-    # plot_loss('result/stage_all/resnet18b4_si_k10.csv',
-    #           'resnet18b4_si_k10.eps')
+    plot_loss('result/stage_all/resnet18b4_si_k20.csv',
+              'resnet18b4_si_k20.eps')
 
-    # plot_loss('result/stage_all/resnet18b4_si_k20.csv',
-    #           'resnet18b4_si_k20.eps')
+    plot_loss('result/stage_all/resnet18b4_si_k30.csv',
+              'resnet18b4_si_k30.eps')
 
-    # plot_loss('result/stage_all/resnet18b4_si_k30.csv',
-    #           'resnet18b4_si_k30.eps')
-    plot_all_in_one()
+
+if __name__ == "__main__":
+    # test()
+    # sicsv = 'result/stage_all/si.csv'
+    # sifig = 'result/stage_all/siloss.eps'
+    # plot_all_in_one(sicsv, sifig)
+
+    pjcsv = 'result/stage_all/pj.csv'
+    pjfig = 'result/stage_all/pjloss.eps'
+    plot_all_in_one(pjcsv, pjfig)
