@@ -5,8 +5,11 @@ import os
 import numpy as np
 import pandas as pd
 import cv2
+import torch
 from torch.utils.data import Dataset
 from collections import Counter
+
+from imgaug import augmenters as iaa
 
 
 def load_all_data():
@@ -178,6 +181,18 @@ def generate_pj_samples(d, sids, shuffle=False, count=4):
     return sid_pj_imgs
 
 
+def aug():
+    hf = iaa.Fliplr(0.5)
+    vf = iaa.Flipud(0.5)
+    contrast = iaa.Sometimes(
+        0.5, iaa.ContrastNormalization((0.8, 1.2)))
+    # color = iaa.Sometimes(
+    #     0.5, iaa.AddToHueAndSaturation((-10, 10), per_channel=True))
+    blur = iaa.Sometimes(0.5, iaa.GaussianBlur(sigma=(0, 0.1)))
+    trfm = iaa.Sequential([hf, vf, contrast, blur])
+    return trfm
+
+
 class SIDataset(Dataset):
 
     def __init__(self, mode='train', k=10):
@@ -305,6 +320,80 @@ class PJDataset(Dataset):
         anns = self._get_sid_label(sid)
 
         return sid, pj_nimg, anns
+
+
+class AggDataset(Dataset):
+    '''Aggregate all images in a bag at once'''
+
+    def __init__(self, mode='train', k=10):
+        super(AggDataset, self).__init__()
+        self.mode = mode
+        self.db, self.top_cv = filter_top_cv(load_all_data(), k)
+        self.nclass = len(self.top_cv)
+        sids = np.array(list(sorted(self.db.keys())))
+
+        labels = [self._get_sid_label(sid) for sid in sids]
+        labels = np.stack(labels, axis=0)
+
+        train_sids, val_sids, test_sids = split_train_val_test(sids, labels)
+
+        if mode == 'train':
+            self.sids = train_sids
+            self.aug = aug()
+        elif mode == 'val':
+            self.sids = val_sids
+        else:
+            self.sids = test_sids
+
+    def _get_sid_label(self, sid):
+        sid_anns = self.db[sid]['ann']
+        anns = np.zeros(self.nclass)
+        for ann in sid_anns:
+            anns[self.top_cv.index(ann)] = 1
+        return anns
+
+    def __len__(self):
+        return len(self.sids)
+
+    def __getitem__(self, idx):
+        sid = self.sids[idx]
+        sid_imgs = self.db[sid]['img']
+        imgs = []
+        for img in sid_imgs:
+            imgpth = os.path.join('data/pic', img)
+            nimg = cv2.imread(imgpth, -1)
+            nimg = cv2.cvtColor(nimg, cv2.COLOR_BGR2RGB)
+            nimg = nimg.transpose(2, 0, 1)
+            if self.mode == 'train':
+                nimg = self.aug.augment_image(nimg)
+            imgs.append(nimg)
+        imgs = np.stack(imgs).astype(np.float)
+
+        anns = self._get_sid_label(sid)
+
+        return sid, imgs, anns
+
+
+def fly_collate_fn(batch):
+    bsid, bimgs, blabel = zip(*batch)
+    size = len(bsid)
+    nslice = [x.shape[0] for x in bimgs]
+    max_slice = max(nslice)
+
+    pad_imgs = []
+    for i in range(size):
+        pad_img = np.pad(bimgs[i],
+                         [(0, max_slice - nslice[i]), (0, 0),
+                          (0, 0), (0, 0)],
+                         mode='constant',
+                         constant_values=0
+                         )
+        pad_imgs.append(pad_img)
+
+    return (np.array(bsid),
+            torch.from_numpy(np.array(pad_imgs)),
+            torch.from_numpy(np.array(blabel)),
+            torch.from_numpy(np.array(nslice)))
 
 
 if __name__ == "__main__":
