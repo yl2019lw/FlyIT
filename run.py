@@ -8,7 +8,6 @@ import numpy as np
 from torch.utils.data.dataloader import default_collate
 import dataset
 import naggn
-import dragn
 import transformer
 import sinet
 import util
@@ -254,30 +253,6 @@ def train_prefv_naggn(s=2):
     # for p in model.module.fvextractor.parameters():
     #     p.require_grad = False
 
-    train.run_train(model, cfg)
-
-
-def train_dragn(s=2):
-    train_dataset = dataset.DrosophilaDataset(mode='train', stage=s)
-    val_dataset = dataset.DrosophilaDataset(mode='val', stage=s)
-    test_dataset = dataset.DrosophilaDataset(mode='test', stage=s)
-
-    cfg = util.default_cfg()
-    cfg['train'] = train_dataset
-    cfg['val'] = val_dataset
-    cfg['test'] = test_dataset
-    cfg['batch'] = 2
-    cfg['lr'] = 0.0001
-    cfg['model'] = 'dragn'
-    cfg['model_dir'] = 'modeldir/stage%d/dragn' % s
-    cfg['collate'] = dataset.fly_collate_fn
-    cfg['instance'] = train._train_si
-
-    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(dragn.DRAGN().cuda())
-    if os.path.exists(model_pth):
-        print("load pretrained model", model_pth)
-        model.load_state_dict(torch.load(model_pth))
     train.run_train(model, cfg)
 
 

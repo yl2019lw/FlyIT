@@ -79,10 +79,10 @@ def train_dragn_agg(k=10):
     cfg['model'] = 'dragn'
     cfg['model_dir'] = 'modeldir/agg_stage_all/dragn_k%d' % k
     cfg['lr'] = 0.0001
-    cfg['nworker'] = 8
+    cfg['batch'] = 8
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
-    model = nn.DataParallel(dragn.DRAGN().cuda())
+    model = nn.DataParallel(dragn.PostDRAGN().cuda())
     if os.path.exists(model_pth):
         ckp = torch.load(model_pth)
         model.load_state_dict(ckp['model'])
