@@ -218,7 +218,8 @@ class E2ETransformer(nn.Module):
 
         self.fvextractor = extractor.Resnet(nblock)
         self.fvdim = 512 // (2 ** (4 - nblock))
-        self.transformer = Transformer(self.fvdim)
+        # self.transformer = Transformer(self.fvdim)
+        self.transformer = Transformer(self.fvdim, NUM_HEADS=3, NUM_LAYERS=2)
 
     def forward(self, x, nslice):
         nsample = x.shape[0]

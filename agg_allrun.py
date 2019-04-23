@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import alldataset
 import transformer
+import dragn
 import naggn
 import util
 import train
@@ -41,6 +42,8 @@ def train_transformer_agg(k=10):
     cfg['model'] = 'transformer'
     cfg['model_dir'] = 'modeldir/agg_stage_all/transformer_k%d' % k
     cfg['lr'] = 0.0001
+    cfg['nworker'] = 8
+    cfg['batch'] = 16
 
     model_pth = os.path.join(cfg['model_dir'], 'model.pth')
     model = nn.DataParallel(transformer.E2ETransformer().cuda())
@@ -71,6 +74,25 @@ def train_naggn_agg(k=10):
     train.run_train(model, cfg)
 
 
+def train_dragn_agg(k=10):
+    cfg = _allrun_config_agg(k)
+    cfg['model'] = 'dragn'
+    cfg['model_dir'] = 'modeldir/agg_stage_all/dragn_k%d' % k
+    cfg['lr'] = 0.0001
+    cfg['nworker'] = 8
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(dragn.DRAGN().cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    train.run_train(model, cfg)
+
+
 if __name__ == "__main__":
     # train_transformer_agg()
-    train_naggn_agg()
+    # train_naggn_agg()
+    train_dragn_agg()

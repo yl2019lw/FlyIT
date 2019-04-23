@@ -14,14 +14,17 @@ class DRAggregator(nn.Module):
                                padding=1, bias=False)
 
     def forward(self, fvs):
-        ns, h, w = fvs.shape
-        if ns == 2:
-            return torch.mean(fvs, keepdim=True)
-        out = []
-        for i in range(ns-3):
-            cfv = fvs[i:i+3, :]
-            out.append(self.conv0(cfv))
-        return torch.concat(out, dim=0)
+        ns, nc, h, w = fvs.shape
+        if ns == 1:
+            return fvs
+        elif ns == 2:
+            return torch.mean(fvs, dim=0, keepdim=True)
+        else:
+            out = []
+            for i in range(ns-3):
+                cfv = fvs[i:i+3, :]
+                out.append(self.conv0(torch.transpose(cfv, 0, 1)))
+            return torch.cat(torch.transpose(out, 0, 1), dim=0)
 
 
 class DRAGN(nn.Module):
@@ -40,8 +43,8 @@ class DRAGN(nn.Module):
         for s in range(nsample):
             fvs = self.fvextractor(x[s, :nslice[s], :])
             while True:
-                ns, h, w = fvs.shape
-                if ns == 1:
+                ns, nc, h, w = fvs.shape
+                if nc == 1:
                     gfv = fvs
                     break
                 else:
