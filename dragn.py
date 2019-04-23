@@ -6,12 +6,59 @@ import torch.nn as nn
 import extractor
 
 
-class PostAggregator(nn.Module):
+class L1Agg(nn.Module):
 
     def __init__(self):
+        super(L1Agg, self).__init__()
+        self.conv0 = nn.Conv2d(3, 1, kernel_size=3,
+                               stride=1, padding=1)
+
+    def forward(self, x):
+        return self.conv0(x)
+
+
+class L2Agg(nn.Module):
+
+    def __init__(self):
+        super(L2Agg, self).__init__()
+        self.conv0 = nn.Conv2d(3, 3, kernel_size=3,
+                               stride=1, padding=1)
+        self.relu0 = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(3, 3, kernel_size=3,
+                               stride=1, padding=1)
+
+    def forward(self, x):
+        return self.conv1(self.relu0(self.conv0(x)))
+
+
+class L3Agg(nn.Module):
+
+    def __init__(self):
+        super(L3Agg, self).__init__()
+        self.conv0 = nn.Conv2d(3, 3, kernel_size=3,
+                               stride=1, padding=1)
+        self.relu0 = nn.ReLU(inplace=True)
+        self.conv1 = nn.Conv2d(3, 3, kernel_size=3,
+                               stride=1, padding=1)
+        self.relu1 = nn.ReLU(inplace=True)
+        self.conv2 = nn.Conv2d(3, 1, kernel_size=3,
+                               stride=1, padding=1)
+
+    def forward(self, x):
+        tmp = self.conv1(self.relu0(self.conv0(x)))
+        return self.conv2(self.relu1(tmp))
+
+
+class PostAggregator(nn.Module):
+
+    def __init__(self, level=2):
         super(PostAggregator, self).__init__()
-        self.conv0 = nn.Conv2d(3, 1, kernel_size=3, stride=1,
-                               padding=1, bias=False)
+        if level == 1:
+            self.agg = L1Agg()
+        elif level == 2:
+            self.agg = L2Agg()
+        else:
+            self.agg = L3Agg()
 
     def forward(self, fvs):
         while True:
@@ -24,7 +71,8 @@ class PostAggregator(nn.Module):
                 out = []
                 for i in range(ns-2):
                     cfv = torch.transpose(fvs[i:i+3, :], 0, 1)
-                    res = torch.transpose(self.conv0(cfv), 0, 1)
+                    agg = self.agg(cfv)
+                    res = torch.transpose(agg, 0, 1)
                     out.append(res)
                 out = torch.cat(out, dim=0)
                 return self.forward(out)
@@ -32,11 +80,11 @@ class PostAggregator(nn.Module):
 
 class PostDRAGN(nn.Module):
 
-    def __init__(self, k=10, nblock=4):
+    def __init__(self, k=10, nblock=4, agglevel=2):
         super(PostDRAGN, self).__init__()
         self.fvextractor = extractor.ConvResnet(nblock)
         fvdim = 512 // (2 ** (4 - nblock))
-        self.aggregator = PostAggregator()
+        self.aggregator = PostAggregator(agglevel)
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.proj = nn.Linear(fvdim, k)
 
