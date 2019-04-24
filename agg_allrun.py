@@ -92,7 +92,26 @@ def train_dragn_agg(k=10):
     train.run_train(model, cfg)
 
 
+def train_pre_dragn_agg(k=10):
+    cfg = _allrun_config_agg(k)
+    cfg['model'] = 'pre_dragn'
+    cfg['model_dir'] = 'modeldir/agg_stage_all/pre_dragn_k%d-1layer' % k
+    cfg['lr'] = 0.0001
+    cfg['batch'] = 32
+
+    model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+    model = nn.DataParallel(dragn.PreDRAGN(agglevel=1).cuda())
+    if os.path.exists(model_pth):
+        ckp = torch.load(model_pth)
+        model.load_state_dict(ckp['model'])
+        cfg['step'] = ckp['epoch'] + 1
+        print("load pretrained model", model_pth, "start epoch:", cfg['step'])
+
+    train.run_train(model, cfg)
+
+
 if __name__ == "__main__":
     # train_transformer_agg()
     # train_naggn_agg()
-    train_dragn_agg()
+    # train_dragn_agg()
+    train_pre_dragn_agg()
