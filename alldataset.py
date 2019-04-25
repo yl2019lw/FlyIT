@@ -374,6 +374,62 @@ class AggDataset(Dataset):
         return sid, imgs, anns
 
 
+def find_i_j_v(seq):
+    '''isOk[i][j][v]: find j numbers from front i sum to v
+    for seq, index starts from 0
+    for isOk mark, index starts from 1
+    '''
+    n = len(seq)
+    tot = np.sum(seq)
+
+    isOk = np.zeros((n+1, n+1, tot+1), dtype=int)
+    isOk[:, 0, 0] = 1
+
+    for i in range(1, n+1):
+        jmax = min(i, n // 2)
+        for j in range(1, jmax + 1):
+            for v in range(1, tot//2 + 1):
+                if isOk[i-1][j][v]:
+                    isOk[i][j][v] = 1
+
+            for v in range(1, tot//2 + 1):
+                if v >= seq[i-1]:
+                    if isOk[i-1][j-1][v-seq[i-1]]:
+                        isOk[i][j][v] = 1
+    return isOk
+
+
+def balance_split(seq):
+    '''split seq to 2 sub list with equal length, sum nearly equal '''
+    n = len(seq)
+    tot = np.sum(seq)
+    res = find_i_j_v(seq)
+
+    i = n
+    j = n // 2
+    v = tot // 2
+
+    sel_idx = []
+    sel_val = []
+
+    while not res[i][j][v] and v > 0:
+        v = v - 1
+
+    while len(sel_idx) < n // 2 and i >= 0:
+        if res[i][j][v] and res[i-1][j-1][v-seq[i-1]]:
+            sel_idx.append(i-1)
+            sel_val.append(seq[i-1])
+            j = j - 1
+            v = v - seq[i-1]
+            i = i - 1
+        else:
+            i = i - 1
+
+    left = sel_idx
+    right = [x for x in list(range(n)) if x not in left]
+    return np.array(left + right)
+
+
 def fly_collate_fn(batch):
     bsid, bimgs, blabel = zip(*batch)
     size = len(bsid)
@@ -389,6 +445,14 @@ def fly_collate_fn(batch):
                          constant_values=0
                          )
         pad_imgs.append(pad_img)
+
+    nslice = np.array(nslice)
+    order = balance_split(nslice)
+
+    bsid = np.array(bsid)[order]
+    pad_imgs = np.array(pad_imgs)[order]
+    blabel = np.array(blabel)[order]
+    nslice = nslice[order]
 
     return (np.array(bsid),
             torch.from_numpy(np.array(pad_imgs)),

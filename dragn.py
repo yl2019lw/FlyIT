@@ -4,6 +4,9 @@
 import torch
 import torch.nn as nn
 import extractor
+import sys
+
+sys.setrecursionlimit(10240)
 
 
 class L1Agg(nn.Module):
