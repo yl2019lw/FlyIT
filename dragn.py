@@ -11,8 +11,9 @@ sys.setrecursionlimit(10240)
 
 class L1Agg(nn.Module):
 
-    def __init__(self):
+    def __init__(self, withbn=False):
         super(L1Agg, self).__init__()
+        self.withbn = withbn
         self.conv0 = nn.Conv2d(3, 1, kernel_size=3,
                                stride=1, padding=1)
 
@@ -22,22 +23,29 @@ class L1Agg(nn.Module):
 
 class L2Agg(nn.Module):
 
-    def __init__(self):
+    def __init__(self, withbn=False):
         super(L2Agg, self).__init__()
+        self.withbn = withbn
         self.conv0 = nn.Conv2d(3, 3, kernel_size=3,
                                stride=1, padding=1)
         self.relu0 = nn.ReLU(inplace=True)
-        self.conv1 = nn.Conv2d(3, 3, kernel_size=3,
+        self.conv1 = nn.Conv2d(3, 1, kernel_size=3,
                                stride=1, padding=1)
+        if self.withbn:
+            self.bn0 = nn.BatchNorm2d(3)
 
     def forward(self, x):
-        return self.conv1(self.relu0(self.conv0(x)))
+        if self.withbn:
+            return self.conv1(self.relu0(self.bn0(self.conv0(x))))
+        else:
+            return self.conv1(self.relu0(self.conv0(x)))
 
 
 class L3Agg(nn.Module):
 
-    def __init__(self):
+    def __init__(self, withbn=False):
         super(L3Agg, self).__init__()
+        self.withbn = withbn
         self.conv0 = nn.Conv2d(3, 3, kernel_size=3,
                                stride=1, padding=1)
         self.relu0 = nn.ReLU(inplace=True)
@@ -47,21 +55,29 @@ class L3Agg(nn.Module):
         self.conv2 = nn.Conv2d(3, 1, kernel_size=3,
                                stride=1, padding=1)
 
+        if self.withbn:
+            self.bn0 = nn.BatchNorm2d(3)
+            self.bn1 = nn.BatchNorm2d(3)
+
     def forward(self, x):
-        tmp = self.conv1(self.relu0(self.conv0(x)))
-        return self.conv2(self.relu1(tmp))
+        if self.withbn:
+            tmp = self.conv1(self.relu0(self.bn0(self.conv0(x))))
+            return self.conv2(self.relu1(self.bn1(tmp)))
+        else:
+            tmp = self.conv1(self.relu0(self.conv0(x)))
+            return self.conv2(self.relu1(tmp))
 
 
 class PostAggregator(nn.Module):
 
-    def __init__(self, level=2):
+    def __init__(self, level=2, withbn=False):
         super(PostAggregator, self).__init__()
         if level == 1:
-            self.agg = L1Agg()
+            self.agg = L1Agg(withbn)
         elif level == 2:
-            self.agg = L2Agg()
+            self.agg = L2Agg(withbn)
         else:
-            self.agg = L3Agg()
+            self.agg = L3Agg(withbn)
 
     def forward(self, fvs):
         while True:
@@ -83,11 +99,11 @@ class PostAggregator(nn.Module):
 
 class PostDRAGN(nn.Module):
 
-    def __init__(self, k=10, nblock=4, agglevel=2):
+    def __init__(self, k=10, nblock=4, agglevel=2, withbn=False):
         super(PostDRAGN, self).__init__()
         self.fvextractor = extractor.ConvResnet(nblock)
         fvdim = 512 // (2 ** (4 - nblock))
-        self.aggregator = PostAggregator(agglevel)
+        self.aggregator = PostAggregator(agglevel, withbn)
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.proj = nn.Linear(fvdim, k)
 
@@ -117,14 +133,14 @@ class PostDRAGN(nn.Module):
 
 class PreAggregator(nn.Module):
 
-    def __init__(self, level=2):
+    def __init__(self, level=2, withbn=False):
         super(PreAggregator, self).__init__()
         if level == 1:
-            self.agg = L1Agg()
+            self.agg = L1Agg(withbn)
         elif level == 2:
-            self.agg = L2Agg()
+            self.agg = L2Agg(withbn)
         else:
-            self.agg = L3Agg()
+            self.agg = L3Agg(withbn)
 
     def forward(self, x, nslice):
         nb, ns, c, h, w = x.shape
@@ -158,11 +174,11 @@ class PreAggregator(nn.Module):
 
 class PreDRAGN(nn.Module):
 
-    def __init__(self, k=10, nblock=4, agglevel=2):
+    def __init__(self, k=10, nblock=4, agglevel=2, withbn=False):
         super(PreDRAGN, self).__init__()
         self.fvextractor = extractor.ConvResnet(nblock)
         fvdim = 512 // (2 ** (4 - nblock))
-        self.aggregator = PreAggregator(agglevel)
+        self.aggregator = PreAggregator(agglevel, withbn)
         self.pool = nn.AdaptiveAvgPool2d(1)
         self.proj = nn.Linear(fvdim, k)
 
