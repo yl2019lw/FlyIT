@@ -130,11 +130,41 @@ def train_sequence_post_dragn():
                 cfg['lr'] = 0.0001
                 cfg['batch'] = 32
                 cfg['patience'] = 10
-                cfg['epochs'] = 120
+                cfg['epochs'] = 80
 
                 model_pth = os.path.join(cfg['model_dir'], 'model.pth')
                 model = nn.DataParallel(
                     dragn.PostDRAGN(k, agglevel=l, withbn=withbn).cuda())
+                if os.path.exists(model_pth):
+                    ckp = torch.load(model_pth)
+                    model.load_state_dict(ckp['model'])
+                    cfg['step'] = ckp['epoch'] + 1
+                    print("load pretrained:", model_pth, "start:", cfg['step'])
+
+                train.run_train(model, cfg)
+
+
+def train_sequence_pre_dragn():
+    ks = [10, 20, 30]
+    levels = [1, 2, 3]
+    withbns = [True, False]
+    for k in ks:
+        for l in levels:
+            for withbn in withbns:
+                cfg = _allrun_config_agg(k)
+                if withbn:
+                    cfg['model'] = 'pre_dragn_k%d_%dl-BN' % (k, l)
+                else:
+                    cfg['model'] = 'pre_dragn_k%d_%dl' % (k, l)
+                cfg['model_dir'] = 'modeldir/agg_stage_all/%s' % cfg['model']
+                cfg['lr'] = 0.0001
+                cfg['batch'] = 32
+                cfg['patience'] = 10
+                cfg['epochs'] = 80
+
+                model_pth = os.path.join(cfg['model_dir'], 'model.pth')
+                model = nn.DataParallel(
+                    dragn.PreDRAGN(k, agglevel=l, withbn=withbn).cuda())
                 if os.path.exists(model_pth):
                     ckp = torch.load(model_pth)
                     model.load_state_dict(ckp['model'])
@@ -149,4 +179,5 @@ if __name__ == "__main__":
     # train_naggn_agg()
     # train_post_dragn_agg(k=10)
     # train_pre_dragn_agg()
-    train_sequence_post_dragn()
+    # train_sequence_post_dragn()
+    train_sequence_pre_dragn()
