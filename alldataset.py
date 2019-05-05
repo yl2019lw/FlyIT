@@ -367,6 +367,10 @@ class AggDataset(Dataset):
             if self.mode == 'train':
                 nimg = self.aug.augment_image(nimg)
             imgs.append(nimg)
+        # if self.mode == 'train':
+        #     np.random.shuffle(imgs)
+        np.random.shuffle(imgs)
+
         imgs = np.stack(imgs).astype(np.float)
 
         anns = self._get_sid_label(sid)
