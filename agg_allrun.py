@@ -145,8 +145,10 @@ def train_sequence_post_dragn():
 
 
 def train_sequence_pre_dragn():
-    ks = [10, 20, 30]
-    levels = [1, 2, 3]
+    # ks = [10, 20, 30]
+    ks = [10]
+    # levels = [1, 2, 3]
+    levels = [3]
     withbns = [True, False]
     for k in ks:
         for l in levels:
