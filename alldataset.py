@@ -8,6 +8,7 @@ import cv2
 import torch
 from torch.utils.data import Dataset
 from collections import Counter
+from collections import defaultdict
 
 from imgaug import augmenters as iaa
 
@@ -111,7 +112,48 @@ def stat(k=10):
         imgs.extend(d[sid]['img'])
         all_cv += d[sid]['ann']
 
-    print("sids", len(sids), "imgs", len(imgs))
+    print("sids", len(sids), "imgs", len(imgs), 'all_cv', len(all_cv))
+
+
+def label_stat(k=10):
+    d = load_all_data()
+    filter_d, top_cv = filter_top_cv(d, k)
+
+    sids = sorted(filter_d.keys())
+    np.random.seed(286501567)
+    np.random.shuffle(sids)
+    ts = int(len(sids) * 0.5)
+    vs = int(len(sids) * 0.4)
+
+    train_sids = sids[:vs]
+    val_sids = sids[vs:ts]
+    test_sids = sids[ts:]
+
+    train_sc = defaultdict(int)
+    val_sc = defaultdict(int)
+    test_sc = defaultdict(int)
+
+    train_ic = defaultdict(int)
+    val_ic = defaultdict(int)
+    test_ic = defaultdict(int)
+
+    for cv in top_cv:
+        for sid in train_sids:
+            if cv in filter_d[sid]['ann']:
+                train_sc[cv] += 1
+                train_ic[cv] += len(filter_d[sid]['img'])
+
+        for sid in val_sids:
+            if cv in filter_d[sid]['ann']:
+                val_sc[cv] += 1
+                val_ic[cv] += len(filter_d[sid]['img'])
+
+        for sid in test_sids:
+            if cv in filter_d[sid]['ann']:
+                test_sc[cv] += 1
+                test_ic[cv] += len(filter_d[sid]['img'])
+
+    return top_cv, (train_sc, val_sc, test_sc), (train_ic, val_ic, test_ic)
 
 
 def all_k_stat():
@@ -464,6 +506,18 @@ def fly_collate_fn(batch):
             torch.from_numpy(np.array(nslice)))
 
 
+def test_label_stat(k=10):
+    top_cv, sc, ic = label_stat(k)
+    print("sid count:")
+    for cv in top_cv:
+        print("%s:%d/%d/%d\n" % (cv, sc[0][cv], sc[1][cv], sc[2][cv]))
+
+    print("image count:")
+    for cv in top_cv:
+        print("%s:%d/%d/%d\n" % (cv, ic[0][cv], ic[1][cv], ic[2][cv]))
+
+
 if __name__ == "__main__":
-    # stat(k=30)
-    all_k_stat()
+    stat(k=30)
+    # all_k_stat()
+    # test_label_stat(k=10)
